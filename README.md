@@ -1,0 +1,161 @@
+# Issue Tracker Full-Stack Starter
+
+A beginner-friendly full-stack starter that keeps the backend layered and uses Express on the server side with Next.js on the frontend.
+
+## Stack
+
+### Backend
+- Node.js 22
+- TypeScript
+- Express
+- Prisma ORM
+- PostgreSQL
+
+### Frontend
+- Next.js
+- React
+- TypeScript
+
+## Project Structure
+
+```text
+.
+|-- frontend
+|   |-- src
+|   |   |-- api
+|   |   `-- app
+|-- prisma
+`-- src
+    |-- config
+    |-- db
+    |-- lib
+    |-- modules
+    |   |-- health
+    |   `-- projects
+    |-- plugins
+    |-- app.ts
+    `-- server.ts
+```
+
+## Backend Request Flow
+
+Requests move through the backend in this order:
+
+`route -> controller -> service -> repository -> database`
+
+- `route`: defines endpoints and validates input
+- `controller`: receives the HTTP request and calls the service
+- `service`: contains app logic for the feature
+- `repository`: talks to Prisma
+- `database`: PostgreSQL stores the data
+
+## API
+
+- `GET /api/v1/health`
+- `GET /api/v1/projects`
+- `POST /api/v1/projects`
+
+### Create project body
+
+```json
+{
+  "name": "CRM Dashboard",
+  "description": "Initial dashboard for account managers."
+}
+```
+
+## Environment Variables
+
+### Backend `.env`
+
+Use `.env.example` and set:
+
+- `NODE_ENV`
+- `HOST`
+- `PORT`
+- `DATABASE_URL`
+- `FRONTEND_ORIGIN`
+- `LOG_LEVEL`
+
+### Frontend `frontend/.env`
+
+Use `frontend/.env.example` and set:
+
+- `NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1`
+
+## Local Development
+
+### 1. Start PostgreSQL
+
+```bash
+docker compose up -d postgres
+```
+
+### 2. Install backend dependencies
+
+```bash
+npm install
+```
+
+### 3. Generate Prisma client
+
+```bash
+npm run prisma:generate
+```
+
+### 4. Run migrations
+
+```bash
+npm run prisma:migrate
+```
+
+### 5. Seed sample projects
+
+```bash
+npm run prisma:seed
+```
+
+### 6. Start the backend
+
+```bash
+npm run dev
+```
+
+The backend runs on `http://localhost:3000`.
+
+### 7. Install frontend dependencies
+
+```bash
+npm run frontend:install
+```
+
+### 8. Start the frontend
+
+```bash
+npm run frontend:dev
+```
+
+The frontend runs on `http://localhost:5173`.
+
+## Build Commands
+
+### Backend
+
+```bash
+npm run build
+npm run start
+```
+
+### Frontend
+
+```bash
+npm run frontend:build
+npm run frontend:start
+```
+
+## What This Starter Teaches
+
+- how a Next.js frontend calls an Express backend
+- how Prisma connects backend code to PostgreSQL
+- how one feature is split into route, controller, service, and repository
+- how to keep the project simple without losing structure
