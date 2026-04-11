@@ -31,6 +31,7 @@ A beginner-friendly full-stack starter that keeps the backend layered and uses E
     |-- lib
     |-- modules
     |   |-- health
+    |   |-- issues
     |   `-- projects
     |-- plugins
     |-- app.ts
@@ -54,6 +55,9 @@ Requests move through the backend in this order:
 - `GET /api/v1/health`
 - `GET /api/v1/projects`
 - `POST /api/v1/projects`
+- `GET /api/v1/projects/:projectId/issues`
+- `POST /api/v1/projects/:projectId/issues`
+- `PATCH /api/v1/projects/:projectId/issues/:issueId/status`
 
 ### Create project body
 
@@ -61,6 +65,22 @@ Requests move through the backend in this order:
 {
   "name": "CRM Dashboard",
   "description": "Initial dashboard for account managers."
+}
+```
+
+### Create issue body
+
+```json
+{
+  "title": "Fix login bug"
+}
+```
+
+### Update issue status body
+
+```json
+{
+  "status": "in_progress"
 }
 ```
 
@@ -137,6 +157,13 @@ npm run frontend:dev
 
 The frontend runs on `http://localhost:5173`.
 
+The dashboard lets you:
+
+- create projects
+- select one project at a time
+- create issues for the selected project
+- move issues between `todo`, `in_progress`, and `done`
+
 ## Build Commands
 
 ### Backend
@@ -159,3 +186,4 @@ npm run frontend:start
 - how Prisma connects backend code to PostgreSQL
 - how one feature is split into route, controller, service, and repository
 - how to keep the project simple without losing structure
+- how projects and issues work together in a small issue-tracker workflow

@@ -4,6 +4,7 @@ import express, { type Express } from 'express';
 import { type AppConfig, loadConfig } from './config/env';
 import { createPrismaClient } from './db/prisma';
 import { createHealthRouter } from './modules/health/health.route';
+import { createIssueRouter } from './modules/issues/issue.route';
 import { createProjectRouter } from './modules/projects/project.route';
 import errorHandler, { notFoundHandler } from './plugins/error-handler';
 
@@ -32,6 +33,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   app.use(express.json());
 
   app.use('/api/v1', createHealthRouter(config));
+  app.use('/api/v1/projects/:projectId/issues', createIssueRouter(prisma));
   app.use('/api/v1/projects', createProjectRouter(prisma));
 
   app.use(notFoundHandler);
