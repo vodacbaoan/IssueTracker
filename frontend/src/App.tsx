@@ -7,9 +7,11 @@ import {
   type Issue,
   type IssuePriority,
   type IssueStatus,
+  updateIssueAssignee,
   updateIssueStatus,
 } from './api/issues';
 import { createProject, getProjects, type Project } from './api/projects';
+import { getUsers, type User } from './api/users';
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
@@ -46,19 +48,24 @@ const ISSUE_STATUSES: IssueStatus[] = ['todo', 'in_progress', 'done'];
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [issueTitle, setIssueTitle] = useState('');
   const [issuePriority, setIssuePriority] = useState<IssuePriority>('medium');
+  const [issueAssigneeId, setIssueAssigneeId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [issuesLoading, setIssuesLoading] = useState(false);
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueError, setIssueError] = useState<string | null>(null);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [statusUpdatingIssueId, setStatusUpdatingIssueId] = useState<string | null>(null);
+  const [assigneeUpdatingIssueId, setAssigneeUpdatingIssueId] = useState<string | null>(null);
 
   const loadProjects = async (): Promise<void> => {
     setLoading(true);
@@ -71,6 +78,20 @@ export default function App() {
       setProjectError(loadError instanceof Error ? loadError.message : 'Failed to load projects');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUsers = async (): Promise<void> => {
+    setUsersLoading(true);
+    setUsersError(null);
+
+    try {
+      const nextUsers = await getUsers();
+      setUsers(nextUsers);
+    } catch (loadError) {
+      setUsersError(loadError instanceof Error ? loadError.message : 'Failed to load users');
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -90,6 +111,7 @@ export default function App() {
 
   useEffect(() => {
     void loadProjects();
+    void loadUsers();
   }, []);
 
   useEffect(() => {
@@ -102,7 +124,7 @@ export default function App() {
         return currentProjectId;
       }
 
-      return projects[0].id;
+      return null;
     });
   }, [projects]);
 
@@ -148,9 +170,14 @@ export default function App() {
     setIssueError(null);
 
     try {
-      await createIssue(selectedProjectId, { title: issueTitle, priority: issuePriority });
+      await createIssue(selectedProjectId, {
+        title: issueTitle,
+        priority: issuePriority,
+        assigneeId: issueAssigneeId || null,
+      });
       setIssueTitle('');
       setIssuePriority('medium');
+      setIssueAssigneeId('');
       await loadIssues(selectedProjectId);
     } catch (submitError) {
       setIssueError(submitError instanceof Error ? submitError.message : 'Failed to create issue');
@@ -175,6 +202,37 @@ export default function App() {
     } finally {
       setStatusUpdatingIssueId(null);
     }
+  };
+
+  const handleIssueAssigneeChange = async (
+    issueId: string,
+    assigneeId: string | null,
+  ): Promise<void> => {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setAssigneeUpdatingIssueId(issueId);
+    setIssueError(null);
+
+    try {
+      await updateIssueAssignee(selectedProjectId, issueId, assigneeId);
+      await loadIssues(selectedProjectId);
+    } catch (updateError) {
+      setIssueError(
+        updateError instanceof Error ? updateError.message : 'Failed to update assignment',
+      );
+    } finally {
+      setAssigneeUpdatingIssueId(null);
+    }
+  };
+
+  const getAssigneeName = (assigneeId: string | null): string => {
+    if (!assigneeId) {
+      return 'Unassigned';
+    }
+
+    return users.find((user) => user.id === assigneeId)?.name ?? 'Unknown user';
   };
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
@@ -320,13 +378,30 @@ export default function App() {
                   </select>
                 </label>
 
+                <label>
+                  <span>Assignee</span>
+                  <select
+                    value={issueAssigneeId}
+                    onChange={(event) => setIssueAssigneeId(event.target.value)}
+                  >
+                    <option value="">Unassigned</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
                 <button type="submit" disabled={issueSubmitting}>
                   {issueSubmitting ? 'Saving...' : 'Create issue'}
                 </button>
               </form>
 
               {issueError ? <p className="message error">{issueError}</p> : null}
+              {usersError ? <p className="message error">{usersError}</p> : null}
               {issuesLoading ? <p className="message">Loading issues...</p> : null}
+              {usersLoading ? <p className="message">Loading users...</p> : null}
 
               {!issuesLoading && issues.length === 0 ? (
                 <p className="message">No issues yet. Create the first one for this project.</p>
@@ -367,6 +442,27 @@ export default function App() {
                             {formatIssueStatus(status)}
                           </button>
                         ))}
+                      </div>
+
+                      <div className="issue-assignment">
+                        <p className="message">Assigned to: {getAssigneeName(issue.assigneeId)}</p>
+                        <label className="issue-assignment-control">
+                          <span>Reassign</span>
+                          <select
+                            value={issue.assigneeId ?? ''}
+                            disabled={assigneeUpdatingIssueId === issue.id || usersLoading}
+                            onChange={(event) =>
+                              void handleIssueAssigneeChange(issue.id, event.target.value || null)
+                            }
+                          >
+                            <option value="">Unassigned</option>
+                            {users.map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {user.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
                     </article>
                   ))}

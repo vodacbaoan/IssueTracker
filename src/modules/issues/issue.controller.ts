@@ -1,5 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { CreateIssueBody, UpdateIssueStatusBody } from './issue.schema';
+import type {
+  CreateIssueBody,
+  UpdateIssueAssigneeBody,
+  UpdateIssueStatusBody,
+} from './issue.schema';
 import type { IssueService } from './issue.service';
 
 export class IssueController {
@@ -44,6 +48,24 @@ export class IssueController {
         projectId,
         issueId,
         request.body.status,
+      );
+      response.json(issue);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateAssignee = async (
+    request: Request<unknown, unknown, UpdateIssueAssigneeBody>,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { projectId, issueId } = request.params as { projectId: string; issueId: string };
+      const issue = await this.issueService.updateIssueAssignee(
+        projectId,
+        issueId,
+        request.body.assigneeId,
       );
       response.json(issue);
     } catch (error) {

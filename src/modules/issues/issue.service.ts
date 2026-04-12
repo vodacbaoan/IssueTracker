@@ -14,6 +14,14 @@ export class IssueService {
     }
   }
 
+  private async ensureAssigneeExists(assigneeId: string): Promise<void> {
+    const assignee = await this.issueRepository.findUser(assigneeId);
+
+    if (!assignee) {
+      throw new NotFoundError('Assignee not found');
+    }
+  }
+
   async listIssues(projectId: string): Promise<Issue[]> {
     await this.ensureProjectExists(projectId);
     return this.issueRepository.listByProject(projectId);
@@ -21,6 +29,11 @@ export class IssueService {
 
   async createIssue(projectId: string, input: CreateIssueBody): Promise<Issue> {
     await this.ensureProjectExists(projectId);
+
+    if (input.assigneeId) {
+      await this.ensureAssigneeExists(input.assigneeId);
+    }
+
     return this.issueRepository.create(projectId, input);
   }
 
@@ -38,5 +51,29 @@ export class IssueService {
     }
 
     return this.issueRepository.updateStatus(issueId, status);
+  }
+
+  async updateIssueAssignee(
+    projectId: string,
+    issueId: string,
+    assigneeId: string | null,
+  ): Promise<Issue> {
+    await this.ensureProjectExists(projectId);
+
+    const issue = await this.issueRepository.findByProjectAndId(projectId, issueId);
+
+    if (!issue) {
+      throw new NotFoundError('Issue not found');
+    }
+
+    if (assigneeId) {
+      await this.ensureAssigneeExists(assigneeId);
+    }
+
+    if (issue.assigneeId === assigneeId) {
+      return issue;
+    }
+
+    return this.issueRepository.updateAssignee(issueId, assigneeId);
   }
 }

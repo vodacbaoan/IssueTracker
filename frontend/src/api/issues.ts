@@ -4,6 +4,7 @@ export type IssuePriority = 'low' | 'medium' | 'high';
 export interface Issue {
   id: string;
   projectId: string;
+  assigneeId: string | null;
   title: string;
   priority: IssuePriority;
   status: IssueStatus;
@@ -14,6 +15,7 @@ export interface Issue {
 export interface CreateIssueInput {
   title: string;
   priority: IssuePriority;
+  assigneeId: string | null;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
@@ -62,6 +64,25 @@ export async function updateIssueStatus(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ status }),
+    },
+  );
+
+  return readJson<Issue>(response);
+}
+
+export async function updateIssueAssignee(
+  projectId: string,
+  issueId: string,
+  assigneeId: string | null,
+): Promise<Issue> {
+  const response = await fetch(
+    `${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/assignee`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ assigneeId }),
     },
   );
 

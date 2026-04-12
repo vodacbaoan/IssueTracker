@@ -249,6 +249,26 @@ button {
   gap: 10px;
 }
 
+.issue-assignment {
+  display: grid;
+  gap: 10px;
+}
+
+.issue-assignment-control {
+  display: grid;
+  gap: 8px;
+  color: #22304d;
+  font-weight: 600;
+}
+
+.issue-assignment-control select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #cbd6e5;
+  background: #fbfcfe;
+}
+
 .status-button {
   border: 1px solid #cbd6e5;
   border-radius: 999px;
@@ -264,6 +284,11 @@ button {
 }
 
 .status-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.issue-assignment-control select:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }

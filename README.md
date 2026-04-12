@@ -32,7 +32,8 @@ A beginner-friendly full-stack starter that keeps the backend layered and uses E
     |-- modules
     |   |-- health
     |   |-- issues
-    |   `-- projects
+    |   |-- projects
+    |   `-- users
     |-- plugins
     |-- app.ts
     `-- server.ts
@@ -53,10 +54,12 @@ Requests move through the backend in this order:
 ## API
 
 - `GET /api/v1/health`
+- `GET /api/v1/users`
 - `GET /api/v1/projects`
 - `POST /api/v1/projects`
 - `GET /api/v1/projects/:projectId/issues`
 - `POST /api/v1/projects/:projectId/issues`
+- `PATCH /api/v1/projects/:projectId/issues/:issueId/assignee`
 - `PATCH /api/v1/projects/:projectId/issues/:issueId/status`
 
 ### Create project body
@@ -73,7 +76,16 @@ Requests move through the backend in this order:
 ```json
 {
   "title": "Fix login bug",
-  "priority": "high"
+  "priority": "high",
+  "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2"
+}
+```
+
+### Update issue assignee body
+
+```json
+{
+  "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2"
 }
 ```
 
@@ -130,7 +142,7 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-### 5. Seed sample projects
+### 5. Seed sample users and projects
 
 ```bash
 npm run prisma:seed
@@ -164,6 +176,7 @@ The dashboard lets you:
 - select one project at a time
 - create issues for the selected project
 - set issue priority as `low`, `medium`, or `high`
+- assign issues to seeded users or leave them unassigned
 - move issues between `todo`, `in_progress`, and `done`
 
 ## Build Commands

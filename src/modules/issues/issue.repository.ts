@@ -1,4 +1,4 @@
-import type { Issue, IssueStatus, PrismaClient, Project } from '@prisma/client';
+import type { Issue, IssueStatus, PrismaClient, Project, User } from '@prisma/client';
 import type { CreateIssueBody } from './issue.schema';
 
 export class IssueRepository {
@@ -7,6 +7,12 @@ export class IssueRepository {
   findProject(projectId: string): Promise<Project | null> {
     return this.prisma.project.findUnique({
       where: { id: projectId },
+    });
+  }
+
+  findUser(userId: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
     });
   }
 
@@ -23,6 +29,7 @@ export class IssueRepository {
         projectId,
         title: input.title,
         priority: input.priority,
+        assigneeId: input.assigneeId,
       },
     });
   }
@@ -40,6 +47,13 @@ export class IssueRepository {
     return this.prisma.issue.update({
       where: { id: issueId },
       data: { status },
+    });
+  }
+
+  updateAssignee(issueId: string, assigneeId: string | null): Promise<Issue> {
+    return this.prisma.issue.update({
+      where: { id: issueId },
+      data: { assigneeId },
     });
   }
 }
