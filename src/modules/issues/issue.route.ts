@@ -6,6 +6,7 @@ import { IssueRepository } from './issue.repository';
 import {
   createIssueBodySchema,
   updateIssueAssigneeBodySchema,
+  updateIssueLabelsBodySchema,
   updateIssueStatusBodySchema,
 } from './issue.schema';
 import { IssueService } from './issue.service';
@@ -70,10 +71,29 @@ export function createIssueRouter(prisma: PrismaClient): Router {
     next();
   };
 
+  const validateUpdateLabels = (
+    request: Request,
+    _response: Response,
+    next: NextFunction,
+  ): void => {
+    const validationResult = updateIssueLabelsBodySchema.safeParse(request.body);
+
+    if (!validationResult.success) {
+      next(
+        new BadRequestError('Request validation failed', validationResult.error.flatten()),
+      );
+      return;
+    }
+
+    request.body = validationResult.data;
+    next();
+  };
+
   router.get('/', issueController.list);
   router.post('/', validateCreateIssue, issueController.create);
   router.patch('/:issueId/status', validateUpdateStatus, issueController.updateStatus);
   router.patch('/:issueId/assignee', validateUpdateAssignee, issueController.updateAssignee);
+  router.patch('/:issueId/labels', validateUpdateLabels, issueController.updateLabels);
 
   return router;
 }

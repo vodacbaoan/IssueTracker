@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type {
   CreateIssueBody,
   UpdateIssueAssigneeBody,
+  UpdateIssueLabelsBody,
   UpdateIssueStatusBody,
 } from './issue.schema';
 import type { IssueService } from './issue.service';
@@ -67,6 +68,20 @@ export class IssueController {
         issueId,
         request.body.assigneeId,
       );
+      response.json(issue);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateLabels = async (
+    request: Request<unknown, unknown, UpdateIssueLabelsBody>,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { projectId, issueId } = request.params as { projectId: string; issueId: string };
+      const issue = await this.issueService.updateIssueLabels(projectId, issueId, request.body);
       response.json(issue);
     } catch (error) {
       next(error);

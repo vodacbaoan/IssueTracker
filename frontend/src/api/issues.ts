@@ -1,3 +1,5 @@
+import type { Label } from './labels';
+
 export type IssueStatus = 'todo' | 'in_progress' | 'done';
 export type IssuePriority = 'low' | 'medium' | 'high';
 
@@ -5,6 +7,7 @@ export interface Issue {
   id: string;
   projectId: string;
   assigneeId: string | null;
+  labels: Label[];
   title: string;
   priority: IssuePriority;
   status: IssueStatus;
@@ -16,6 +19,7 @@ export interface CreateIssueInput {
   title: string;
   priority: IssuePriority;
   assigneeId: string | null;
+  labelIds: string[];
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
@@ -83,6 +87,25 @@ export async function updateIssueAssignee(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ assigneeId }),
+    },
+  );
+
+  return readJson<Issue>(response);
+}
+
+export async function updateIssueLabels(
+  projectId: string,
+  issueId: string,
+  labelIds: string[],
+): Promise<Issue> {
+  const response = await fetch(
+    `${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/labels`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ labelIds }),
     },
   );
 

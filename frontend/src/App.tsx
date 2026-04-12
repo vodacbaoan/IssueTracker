@@ -1,6 +1,7 @@
 'use client';
 
 import { type SyntheticEvent, useEffect, useState } from 'react';
+import { getLabels, type Label } from './api/labels';
 import {
   createIssue,
   getIssues,
@@ -8,6 +9,7 @@ import {
   type IssuePriority,
   type IssueStatus,
   updateIssueAssignee,
+  updateIssueLabels,
   updateIssueStatus,
 } from './api/issues';
 import { createProject, getProjects, type Project } from './api/projects';
@@ -43,6 +45,12 @@ function formatIssuePriority(priority: IssuePriority): string {
   }
 }
 
+function toggleIdInList(currentIds: string[], id: string): string[] {
+  return currentIds.includes(id)
+    ? currentIds.filter((currentId) => currentId !== id)
+    : [...currentIds, id];
+}
+
 const ISSUE_PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 const ISSUE_STATUSES: IssueStatus[] = ['todo', 'in_progress', 'done'];
 
@@ -55,6 +63,7 @@ const ISSUE_SECTION_COPY: Record<IssueStatus, string> = {
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -62,16 +71,25 @@ export default function App() {
   const [issueTitle, setIssueTitle] = useState('');
   const [issuePriority, setIssuePriority] = useState<IssuePriority>('medium');
   const [issueAssigneeId, setIssueAssigneeId] = useState('');
+  const [issueLabelIds, setIssueLabelIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | IssueStatus>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | IssuePriority>('all');
+  const [assigneeFilterId, setAssigneeFilterId] = useState('all');
+  const [labelFilterId, setLabelFilterId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [labelsLoading, setLabelsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [issuesLoading, setIssuesLoading] = useState(false);
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueError, setIssueError] = useState<string | null>(null);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [labelsError, setLabelsError] = useState<string | null>(null);
   const [statusUpdatingIssueId, setStatusUpdatingIssueId] = useState<string | null>(null);
   const [assigneeUpdatingIssueId, setAssigneeUpdatingIssueId] = useState<string | null>(null);
+  const [labelUpdatingIssueId, setLabelUpdatingIssueId] = useState<string | null>(null);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
 
   const loadProjects = async (): Promise<void> => {
@@ -102,6 +120,20 @@ export default function App() {
     }
   };
 
+  const loadLabels = async (): Promise<void> => {
+    setLabelsLoading(true);
+    setLabelsError(null);
+
+    try {
+      const nextLabels = await getLabels();
+      setLabels(nextLabels);
+    } catch (loadError) {
+      setLabelsError(loadError instanceof Error ? loadError.message : 'Failed to load labels');
+    } finally {
+      setLabelsLoading(false);
+    }
+  };
+
   const loadIssues = async (projectId: string): Promise<void> => {
     setIssuesLoading(true);
     setIssueError(null);
@@ -119,6 +151,7 @@ export default function App() {
   useEffect(() => {
     void loadProjects();
     void loadUsers();
+    void loadLabels();
   }, []);
 
   useEffect(() => {
@@ -189,10 +222,12 @@ export default function App() {
         title: issueTitle,
         priority: issuePriority,
         assigneeId: issueAssigneeId || null,
+        labelIds: issueLabelIds,
       });
       setIssueTitle('');
       setIssuePriority('medium');
       setIssueAssigneeId('');
+      setIssueLabelIds([]);
       await loadIssues(selectedProjectId);
     } catch (submitError) {
       setIssueError(submitError instanceof Error ? submitError.message : 'Failed to create issue');
@@ -242,6 +277,29 @@ export default function App() {
     }
   };
 
+  const handleIssueLabelsChange = async (
+    issueId: string,
+    labelIds: string[],
+  ): Promise<void> => {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setLabelUpdatingIssueId(issueId);
+    setIssueError(null);
+
+    try {
+      await updateIssueLabels(selectedProjectId, issueId, labelIds);
+      await loadIssues(selectedProjectId);
+    } catch (updateError) {
+      setIssueError(
+        updateError instanceof Error ? updateError.message : 'Failed to update labels',
+      );
+    } finally {
+      setLabelUpdatingIssueId(null);
+    }
+  };
+
   const getAssigneeName = (assigneeId: string | null): string => {
     if (!assigneeId) {
       return 'Unassigned';
@@ -250,16 +308,43 @@ export default function App() {
     return users.find((user) => user.id === assigneeId)?.name ?? 'Unknown user';
   };
 
+  const clearFilters = (): void => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setAssigneeFilterId('all');
+    setLabelFilterId('all');
+  };
+
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredIssues = issues.filter((issue) => {
+    const matchesSearch =
+      normalizedSearchQuery.length === 0 ||
+      issue.title.toLowerCase().includes(normalizedSearchQuery) ||
+      getAssigneeName(issue.assigneeId).toLowerCase().includes(normalizedSearchQuery) ||
+      issue.labels.some((label) => label.name.toLowerCase().includes(normalizedSearchQuery));
+
+    const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
+    const matchesAssignee = assigneeFilterId === 'all' || issue.assigneeId === assigneeFilterId;
+    const matchesLabel =
+      labelFilterId === 'all' || issue.labels.some((label) => label.id === labelFilterId);
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesAssignee && matchesLabel;
+  });
   const groupedIssues = ISSUE_STATUSES.map((status) => ({
     status,
     label: formatIssueStatus(status),
     description: ISSUE_SECTION_COPY[status],
-    items: issues.filter((issue) => issue.status === status),
+    items: filteredIssues.filter((issue) => issue.status === status),
   }));
   const openIssueCount = issues.filter((issue) => issue.status !== 'done').length;
   const doneIssueCount = issues.filter((issue) => issue.status === 'done').length;
   const unassignedIssueCount = issues.filter((issue) => !issue.assigneeId).length;
+  const activeFilterCount = [searchQuery, statusFilter, priorityFilter, assigneeFilterId, labelFilterId]
+    .filter((value) => value !== '' && value !== 'all')
+    .length;
 
   return (
     <main className="page-shell">
@@ -268,8 +353,8 @@ export default function App() {
           <p className="eyebrow">Issue tracker</p>
           <h1>Delivery workspace</h1>
           <p className="intro">
-            Keep projects, priorities, and ownership aligned in one calm space built for daily
-            momentum.
+            Keep projects, priorities, labels, and ownership aligned in one calm space built for
+            daily momentum.
           </p>
         </div>
 
@@ -481,12 +566,143 @@ export default function App() {
                   <button className="issue-submit-button" type="submit" disabled={issueSubmitting}>
                     {issueSubmitting ? 'Saving...' : 'Create issue'}
                   </button>
+
+                  <fieldset className="label-field issue-label-field">
+                    <legend>Labels</legend>
+                    <div className="label-toggle-grid">
+                      {labels.map((label) => {
+                        const isSelected = issueLabelIds.includes(label.id);
+
+                        return (
+                          <button
+                            aria-pressed={isSelected}
+                            className={`label-toggle ${isSelected ? 'label-toggle-active' : ''}`}
+                            disabled={labelsLoading}
+                            key={label.id}
+                            onClick={() =>
+                              setIssueLabelIds((currentIds) => toggleIdInList(currentIds, label.id))
+                            }
+                            type="button"
+                          >
+                            {label.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {!labelsLoading && labels.length === 0 ? (
+                      <p className="message">No labels available yet.</p>
+                    ) : null}
+                  </fieldset>
                 </form>
 
                 {issueError ? <p className="message error">{issueError}</p> : null}
                 {usersError ? <p className="message error">{usersError}</p> : null}
+                {labelsError ? <p className="message error">{labelsError}</p> : null}
                 {issuesLoading ? <p className="message">Loading issues...</p> : null}
                 {usersLoading ? <p className="message">Loading users...</p> : null}
+                {labelsLoading ? <p className="message">Loading labels...</p> : null}
+              </section>
+
+              <section className="panel filters-panel">
+                <div className="section-heading filters-heading">
+                  <div>
+                    <p className="eyebrow">Refine board</p>
+                    <h2>Find the right slice of work</h2>
+                  </div>
+                  <p className="filter-summary">
+                    Showing {filteredIssues.length} of {issues.length} issues
+                  </p>
+                </div>
+
+                <div className="filter-grid">
+                  <label className="filter-search-field">
+                    <span>Search</span>
+                    <input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Search title, assignee, or label"
+                    />
+                  </label>
+
+                  <label>
+                    <span>Status</span>
+                    <select
+                      value={statusFilter}
+                      onChange={(event) =>
+                        setStatusFilter(event.target.value as 'all' | IssueStatus)
+                      }
+                    >
+                      <option value="all">All statuses</option>
+                      {ISSUE_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {formatIssueStatus(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Priority</span>
+                    <select
+                      value={priorityFilter}
+                      onChange={(event) =>
+                        setPriorityFilter(event.target.value as 'all' | IssuePriority)
+                      }
+                    >
+                      <option value="all">All priorities</option>
+                      {ISSUE_PRIORITIES.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {formatIssuePriority(priority)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Assignee</span>
+                    <select
+                      value={assigneeFilterId}
+                      onChange={(event) => setAssigneeFilterId(event.target.value)}
+                    >
+                      <option value="all">Anyone</option>
+                      <option value="">Unassigned</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Label</span>
+                    <select
+                      value={labelFilterId}
+                      onChange={(event) => setLabelFilterId(event.target.value)}
+                    >
+                      <option value="all">All labels</option>
+                      {labels.map((label) => (
+                        <option key={label.id} value={label.id}>
+                          {label.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button
+                    className="secondary-button filter-clear-button"
+                    disabled={activeFilterCount === 0}
+                    onClick={clearFilters}
+                    type="button"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+
+                {filteredIssues.length === 0 && issues.length > 0 ? (
+                  <p className="message">No issues match the current filters yet.</p>
+                ) : null}
               </section>
 
               <div className="status-stack">
@@ -523,6 +739,58 @@ export default function App() {
                                   {formatIssueStatus(issue.status)}
                                 </span>
                               </div>
+                            </div>
+
+                            <div className="issue-label-block">
+                              <div className="issue-label-list">
+                                {issue.labels.length > 0 ? (
+                                  issue.labels.map((label) => (
+                                    <span className="label-pill" key={label.id}>
+                                      {label.name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <p className="message">No labels yet.</p>
+                                )}
+                              </div>
+
+                              {labels.length > 0 ? (
+                                <div className="issue-label-editor">
+                                  <span>Retag</span>
+                                  <div className="label-toggle-grid">
+                                    {labels.map((label) => {
+                                      const isSelected = issue.labels.some(
+                                        (issueLabel) => issueLabel.id === label.id,
+                                      );
+
+                                      return (
+                                        <button
+                                          aria-pressed={isSelected}
+                                          className={`label-toggle ${
+                                            isSelected ? 'label-toggle-active' : ''
+                                          }`}
+                                          disabled={
+                                            labelsLoading || labelUpdatingIssueId === issue.id
+                                          }
+                                          key={label.id}
+                                          onClick={() =>
+                                            void handleIssueLabelsChange(
+                                              issue.id,
+                                              toggleIdInList(
+                                                issue.labels.map((issueLabel) => issueLabel.id),
+                                                label.id,
+                                              ),
+                                            )
+                                          }
+                                          type="button"
+                                        >
+                                          {label.name}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ) : null}
                             </div>
 
                             <div className="status-actions">

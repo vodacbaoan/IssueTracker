@@ -32,6 +32,7 @@ A beginner-friendly full-stack starter that keeps the backend layered and uses E
     |-- modules
     |   |-- health
     |   |-- issues
+    |   |-- labels
     |   |-- projects
     |   `-- users
     |-- plugins
@@ -54,12 +55,14 @@ Requests move through the backend in this order:
 ## API
 
 - `GET /api/v1/health`
+- `GET /api/v1/labels`
 - `GET /api/v1/users`
 - `GET /api/v1/projects`
 - `POST /api/v1/projects`
 - `GET /api/v1/projects/:projectId/issues`
 - `POST /api/v1/projects/:projectId/issues`
 - `PATCH /api/v1/projects/:projectId/issues/:issueId/assignee`
+- `PATCH /api/v1/projects/:projectId/issues/:issueId/labels`
 - `PATCH /api/v1/projects/:projectId/issues/:issueId/status`
 
 ### Create project body
@@ -77,7 +80,11 @@ Requests move through the backend in this order:
 {
   "title": "Fix login bug",
   "priority": "high",
-  "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2"
+  "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2",
+  "labelIds": [
+    "60d7758b-5b08-46db-96a2-a17c6bccdd92",
+    "390a5b34-2dd3-4e6a-8ee8-3c279b2180f2"
+  ]
 }
 ```
 
@@ -86,6 +93,17 @@ Requests move through the backend in this order:
 ```json
 {
   "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2"
+}
+```
+
+### Update issue labels body
+
+```json
+{
+  "labelIds": [
+    "60d7758b-5b08-46db-96a2-a17c6bccdd92",
+    "390a5b34-2dd3-4e6a-8ee8-3c279b2180f2"
+  ]
 }
 ```
 
@@ -142,7 +160,7 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-### 5. Seed sample users and projects
+### 5. Seed sample users, labels, and projects
 
 ```bash
 npm run prisma:seed
@@ -177,6 +195,9 @@ The dashboard lets you:
 - create issues for the selected project
 - set issue priority as `low`, `medium`, or `high`
 - assign issues to seeded users or leave them unassigned
+- tag issues with seeded labels
+- retag existing issues from the workspace
+- filter issues by search text, status, priority, assignee, and label
 - move issues between `todo`, `in_progress`, and `done`
 
 ## Build Commands
@@ -202,3 +223,4 @@ npm run frontend:start
 - how one feature is split into route, controller, service, and repository
 - how to keep the project simple without losing structure
 - how projects and issues work together in a small issue-tracker workflow
+- how labels and filters make a simple issue tracker easier to triage

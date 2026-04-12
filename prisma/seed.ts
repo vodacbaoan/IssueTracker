@@ -17,6 +17,15 @@ const seedUsers = [
   { name: 'Leo Tran', email: 'leo.tran@example.com' },
 ] as const;
 
+const seedLabels = [
+  { name: 'Bug' },
+  { name: 'Content' },
+  { name: 'Dashboard' },
+  { name: 'Frontend' },
+  { name: 'Research' },
+  { name: 'UX' },
+] as const;
+
 interface SeedProject {
   name: string;
   description: string;
@@ -25,6 +34,7 @@ interface SeedProject {
     priority: IssuePriority;
     status: IssueStatus;
     assigneeEmail?: (typeof seedUsers)[number]['email'];
+    labelNames?: Array<(typeof seedLabels)[number]['name']>;
   }>;
 }
 
@@ -38,14 +48,21 @@ const seedProjects: SeedProject[] = [
         priority: 'high',
         status: 'todo',
         assigneeEmail: 'mia.chen@example.com',
+        labelNames: ['Content', 'Research'],
       },
       {
         title: 'Ship responsive navigation polish',
         priority: 'medium',
         status: 'in_progress',
         assigneeEmail: 'noah.patel@example.com',
+        labelNames: ['Frontend', 'UX'],
       },
-      { title: 'Audit homepage image compression', priority: 'low', status: 'done' },
+      {
+        title: 'Audit homepage image compression',
+        priority: 'low',
+        status: 'done',
+        labelNames: ['Frontend'],
+      },
     ],
   },
   {
@@ -57,14 +74,21 @@ const seedProjects: SeedProject[] = [
         priority: 'high',
         status: 'todo',
         assigneeEmail: 'leo.tran@example.com',
+        labelNames: ['Dashboard', 'UX'],
       },
       {
         title: 'Connect warehouse activity feed',
         priority: 'medium',
         status: 'in_progress',
         assigneeEmail: 'sofia.nguyen@example.com',
+        labelNames: ['Dashboard', 'Frontend'],
       },
-      { title: 'Create initial table filters', priority: 'low', status: 'done' },
+      {
+        title: 'Create initial table filters',
+        priority: 'low',
+        status: 'done',
+        labelNames: ['Dashboard', 'Research'],
+      },
     ],
   },
   {
@@ -76,23 +100,32 @@ const seedProjects: SeedProject[] = [
         priority: 'high',
         status: 'todo',
         assigneeEmail: 'sofia.nguyen@example.com',
+        labelNames: ['Bug', 'Frontend'],
       },
       {
         title: 'Add ticket status badges',
         priority: 'medium',
         status: 'in_progress',
         assigneeEmail: 'mia.chen@example.com',
+        labelNames: ['Frontend', 'UX'],
       },
-      { title: 'Seed starter support categories', priority: 'low', status: 'done' },
+      {
+        title: 'Seed starter support categories',
+        priority: 'low',
+        status: 'done',
+        labelNames: ['Content', 'Research'],
+      },
     ],
   },
 ];
 
 async function main(): Promise<void> {
   await prisma.project.deleteMany();
+  await prisma.label.deleteMany();
   await prisma.user.deleteMany();
 
   const userIdsByEmail = new Map<string, string>();
+  const labelIdsByName = new Map<string, string>();
 
   for (const user of seedUsers) {
     const createdUser = await prisma.user.create({
@@ -100,6 +133,14 @@ async function main(): Promise<void> {
     });
 
     userIdsByEmail.set(createdUser.email, createdUser.id);
+  }
+
+  for (const label of seedLabels) {
+    const createdLabel = await prisma.label.create({
+      data: label,
+    });
+
+    labelIdsByName.set(createdLabel.name, createdLabel.id);
   }
 
   for (const project of seedProjects) {
@@ -114,6 +155,15 @@ async function main(): Promise<void> {
             priority: issue.priority,
             status: issue.status,
             assigneeId: issue.assigneeEmail ? userIdsByEmail.get(issue.assigneeEmail) ?? null : null,
+            labels:
+              issue.labelNames && issue.labelNames.length > 0
+                ? {
+                    connect: issue.labelNames
+                      .map((labelName) => labelIdsByName.get(labelName))
+                      .filter((labelId): labelId is string => Boolean(labelId))
+                      .map((labelId) => ({ id: labelId })),
+                  }
+                : undefined,
           })),
         },
       },
