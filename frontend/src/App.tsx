@@ -5,6 +5,7 @@ import {
   createIssue,
   getIssues,
   type Issue,
+  type IssuePriority,
   type IssueStatus,
   updateIssueStatus,
 } from './api/issues';
@@ -27,6 +28,20 @@ function formatIssueStatus(status: IssueStatus): string {
   }
 }
 
+function formatIssuePriority(priority: IssuePriority): string {
+  switch (priority) {
+    case 'low':
+      return 'Low';
+    case 'medium':
+      return 'Medium';
+    case 'high':
+      return 'High';
+    default:
+      return priority;
+  }
+}
+
+const ISSUE_PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 const ISSUE_STATUSES: IssueStatus[] = ['todo', 'in_progress', 'done'];
 
 export default function App() {
@@ -36,6 +51,7 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [issueTitle, setIssueTitle] = useState('');
+  const [issuePriority, setIssuePriority] = useState<IssuePriority>('medium');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
@@ -132,8 +148,9 @@ export default function App() {
     setIssueError(null);
 
     try {
-      await createIssue(selectedProjectId, { title: issueTitle });
+      await createIssue(selectedProjectId, { title: issueTitle, priority: issuePriority });
       setIssueTitle('');
+      setIssuePriority('medium');
       await loadIssues(selectedProjectId);
     } catch (submitError) {
       setIssueError(submitError instanceof Error ? submitError.message : 'Failed to create issue');
@@ -289,6 +306,20 @@ export default function App() {
                   />
                 </label>
 
+                <label>
+                  <span>Priority</span>
+                  <select
+                    value={issuePriority}
+                    onChange={(event) => setIssuePriority(event.target.value as IssuePriority)}
+                  >
+                    {ISSUE_PRIORITIES.map((priority) => (
+                      <option key={priority} value={priority}>
+                        {formatIssuePriority(priority)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
                 <button type="submit" disabled={issueSubmitting}>
                   {issueSubmitting ? 'Saving...' : 'Create issue'}
                 </button>
@@ -310,9 +341,14 @@ export default function App() {
                           <h3>{issue.title}</h3>
                           <span>{formatDate(issue.createdAt)}</span>
                         </div>
-                        <span className={`status-pill status-${issue.status}`}>
-                          {formatIssueStatus(issue.status)}
-                        </span>
+                        <div className="issue-badges">
+                          <span className={`priority-pill priority-${issue.priority}`}>
+                            {formatIssuePriority(issue.priority)}
+                          </span>
+                          <span className={`status-pill status-${issue.status}`}>
+                            {formatIssueStatus(issue.status)}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="status-actions">

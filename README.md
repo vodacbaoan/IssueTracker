@@ -72,7 +72,8 @@ Requests move through the backend in this order:
 
 ```json
 {
-  "title": "Fix login bug"
+  "title": "Fix login bug",
+  "priority": "high"
 }
 ```
 
@@ -162,6 +163,7 @@ The dashboard lets you:
 - create projects
 - select one project at a time
 - create issues for the selected project
+- set issue priority as `low`, `medium`, or `high`
 - move issues between `todo`, `in_progress`, and `done`
 
 ## Build Commands

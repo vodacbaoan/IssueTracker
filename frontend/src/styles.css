@@ -18,6 +18,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -96,6 +97,7 @@ button {
 }
 
 .project-form input,
+.project-form select,
 .project-form textarea {
   width: 100%;
   padding: 12px 14px;
@@ -194,6 +196,14 @@ button {
   gap: 16px;
 }
 
+.issue-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.priority-pill,
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -201,6 +211,21 @@ button {
   padding: 6px 10px;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.priority-low {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.priority-medium {
+  background: #ecfeff;
+  color: #155e75;
+}
+
+.priority-high {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .status-todo {

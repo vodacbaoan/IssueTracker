@@ -1,9 +1,11 @@
 export type IssueStatus = 'todo' | 'in_progress' | 'done';
+export type IssuePriority = 'low' | 'medium' | 'high';
 
 export interface Issue {
   id: string;
   projectId: string;
   title: string;
+  priority: IssuePriority;
   status: IssueStatus;
   createdAt: string;
   updatedAt: string;
@@ -11,6 +13,7 @@ export interface Issue {
 
 export interface CreateIssueInput {
   title: string;
+  priority: IssuePriority;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';

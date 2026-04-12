@@ -13,7 +13,7 @@ export class IssueRepository {
   listByProject(projectId: string): Promise<Issue[]> {
     return this.prisma.issue.findMany({
       where: { projectId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -22,6 +22,7 @@ export class IssueRepository {
       data: {
         projectId,
         title: input.title,
+        priority: input.priority,
       },
     });
   }
