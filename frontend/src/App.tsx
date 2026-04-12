@@ -46,6 +46,12 @@ function formatIssuePriority(priority: IssuePriority): string {
 const ISSUE_PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 const ISSUE_STATUSES: IssueStatus[] = ['todo', 'in_progress', 'done'];
 
+const ISSUE_SECTION_COPY: Record<IssueStatus, string> = {
+  todo: 'Ideas ready for the next focused push.',
+  in_progress: 'Work that is currently moving through delivery.',
+  done: 'Completed items kept for handoff and reference.',
+};
+
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -66,6 +72,7 @@ export default function App() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [statusUpdatingIssueId, setStatusUpdatingIssueId] = useState<string | null>(null);
   const [assigneeUpdatingIssueId, setAssigneeUpdatingIssueId] = useState<string | null>(null);
+  const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
 
   const loadProjects = async (): Promise<void> => {
     setLoading(true);
@@ -115,6 +122,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!loading && projects.length === 0) {
+      setIsProjectFormOpen(true);
+    }
+  }, [loading, projects.length]);
+
+  useEffect(() => {
     setSelectedProjectId((currentProjectId) => {
       if (projects.length === 0) {
         return null;
@@ -135,6 +148,7 @@ export default function App() {
       return;
     }
 
+    setIssues([]);
     void loadIssues(selectedProjectId);
   }, [selectedProjectId]);
 
@@ -150,6 +164,7 @@ export default function App() {
       });
       setName('');
       setDescription('');
+      setIsProjectFormOpen(false);
       setSelectedProjectId(project.id);
       await loadProjects();
     } catch (submitError) {
@@ -236,239 +251,326 @@ export default function App() {
   };
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
+  const groupedIssues = ISSUE_STATUSES.map((status) => ({
+    status,
+    label: formatIssueStatus(status),
+    description: ISSUE_SECTION_COPY[status],
+    items: issues.filter((issue) => issue.status === status),
+  }));
+  const openIssueCount = issues.filter((issue) => issue.status !== 'done').length;
+  const doneIssueCount = issues.filter((issue) => issue.status === 'done').length;
+  const unassignedIssueCount = issues.filter((issue) => !issue.assigneeId).length;
 
   return (
     <main className="page-shell">
-      <section className="panel hero-panel">
-        <p className="eyebrow">Simple Full-Stack Starter</p>
-        <h1>Projects dashboard</h1>
-        <p className="intro">
-          This page reads projects from the Express backend and writes new ones to PostgreSQL through Prisma.
-        </p>
-      </section>
+      <header className="panel dashboard-header">
+        <div className="dashboard-copy">
+          <p className="eyebrow">Issue tracker</p>
+          <h1>Delivery workspace</h1>
+          <p className="intro">
+            Keep projects, priorities, and ownership aligned in one calm space built for daily
+            momentum.
+          </p>
+        </div>
 
-      <section className="layout-grid">
-        <section className="panel">
-          <div className="section-heading">
+        <div className="header-stats">
+          <article className="stat-chip">
+            <span>Projects</span>
+            <strong>{loading ? '...' : projects.length}</strong>
+          </article>
+          <article className="stat-chip">
+            <span>People</span>
+            <strong>{usersLoading ? '...' : users.length}</strong>
+          </article>
+        </div>
+      </header>
+
+      <section className="workspace-shell">
+        <aside className="panel project-rail">
+          <div className="rail-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2>Add a project</h2>
+              <p className="eyebrow">Projects</p>
+              <h2>Project rail</h2>
             </div>
-          </div>
-
-          <form className="project-form" onSubmit={(event) => void handleSubmit(event)}>
-            <label>
-              <span>Name</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Ex: CRM Dashboard"
-                minLength={2}
-                maxLength={120}
-                required
-              />
-            </label>
-
-            <label>
-              <span>Description</span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Short description of the project"
-                maxLength={1000}
-                rows={4}
-              />
-            </label>
-
-            <button type="submit" disabled={submitting}>
-              {submitting ? 'Saving...' : 'Create project'}
-            </button>
-          </form>
-
-          {projectError ? <p className="message error">{projectError}</p> : null}
-        </section>
-
-        <section className="panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Read</p>
-              <h2>Existing projects</h2>
-            </div>
-            <button className="secondary-button" type="button" onClick={() => void loadProjects()}>
+            <button
+              className="secondary-button rail-action"
+              type="button"
+              onClick={() => void loadProjects()}
+            >
               Refresh
             </button>
           </div>
 
-          {loading ? <p className="message">Loading projects...</p> : null}
+          <button
+            aria-controls="new-project-panel"
+            aria-expanded={isProjectFormOpen}
+            className={`toggle-button ${isProjectFormOpen ? 'toggle-button-active' : ''}`}
+            onClick={() => setIsProjectFormOpen((currentState) => !currentState)}
+            type="button"
+          >
+            {isProjectFormOpen ? 'Hide new project' : 'New project'}
+          </button>
 
-          {!loading && projects.length === 0 ? (
-            <p className="message">No projects yet. Create the first one using the form.</p>
-          ) : null}
+          {isProjectFormOpen ? (
+            <section className="create-project-panel" id="new-project-panel">
+              <div className="panel-heading">
+                <h3>Start a project</h3>
+                <p>Create a new track for incoming work and open it in the workspace immediately.</p>
+              </div>
 
-          {!loading && projects.length > 0 ? (
-            <div className="project-list">
-              {projects.map((project) => (
-                <article
-                  className={`project-card ${
-                    project.id === selectedProjectId ? 'project-card-selected' : ''
-                  }`}
-                  key={project.id}
-                >
-                  <div className="project-card-header">
-                    <div>
-                      <h3>{project.name}</h3>
-                      <span>{formatDate(project.createdAt)}</span>
-                    </div>
-                    <button
-                      className="secondary-button project-select-button"
-                      type="button"
-                      onClick={() => setSelectedProjectId(project.id)}
-                      disabled={project.id === selectedProjectId}
-                    >
-                      {project.id === selectedProjectId ? 'Selected' : 'Open issues'}
-                    </button>
-                  </div>
-                  <p>{project.description || 'No description provided yet.'}</p>
-                </article>
-              ))}
-            </div>
-          ) : null}
-        </section>
-
-        <section className="panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Issues</p>
-              <h2>{selectedProject ? selectedProject.name : 'Select a project'}</h2>
-            </div>
-          </div>
-
-          {!selectedProject ? (
-            <p className="message">Select a project from the list to create and manage issues.</p>
-          ) : (
-            <div className="issue-workspace">
-              <p className="message issue-context">
-                Manage the issue workflow for <strong>{selectedProject.name}</strong>.
-              </p>
-
-              <form className="project-form" onSubmit={(event) => void handleIssueSubmit(event)}>
+              <form className="project-form compact-form" onSubmit={(event) => void handleSubmit(event)}>
                 <label>
-                  <span>Issue title</span>
+                  <span>Name</span>
                   <input
-                    value={issueTitle}
-                    onChange={(event) => setIssueTitle(event.target.value)}
-                    placeholder="Ex: Fix login bug"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Ex: CRM Dashboard"
                     minLength={2}
-                    maxLength={160}
+                    maxLength={120}
                     required
                   />
                 </label>
 
                 <label>
-                  <span>Priority</span>
-                  <select
-                    value={issuePriority}
-                    onChange={(event) => setIssuePriority(event.target.value as IssuePriority)}
-                  >
-                    {ISSUE_PRIORITIES.map((priority) => (
-                      <option key={priority} value={priority}>
-                        {formatIssuePriority(priority)}
-                      </option>
-                    ))}
-                  </select>
+                  <span>Description</span>
+                  <textarea
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="Short description of the project"
+                    maxLength={1000}
+                    rows={4}
+                  />
                 </label>
 
-                <label>
-                  <span>Assignee</span>
-                  <select
-                    value={issueAssigneeId}
-                    onChange={(event) => setIssueAssigneeId(event.target.value)}
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <button type="submit" disabled={issueSubmitting}>
-                  {issueSubmitting ? 'Saving...' : 'Create issue'}
+                <button type="submit" disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Create project'}
                 </button>
               </form>
+            </section>
+          ) : null}
 
-              {issueError ? <p className="message error">{issueError}</p> : null}
-              {usersError ? <p className="message error">{usersError}</p> : null}
-              {issuesLoading ? <p className="message">Loading issues...</p> : null}
-              {usersLoading ? <p className="message">Loading users...</p> : null}
+          {projectError ? <p className="message error">{projectError}</p> : null}
+          {loading ? <p className="message">Loading projects...</p> : null}
 
-              {!issuesLoading && issues.length === 0 ? (
-                <p className="message">No issues yet. Create the first one for this project.</p>
-              ) : null}
+          {!loading && projects.length === 0 ? (
+            <p className="message rail-empty">
+              No projects yet. Open the panel above to create the first one.
+            </p>
+          ) : null}
 
-              {!issuesLoading && issues.length > 0 ? (
-                <div className="project-list">
-                  {issues.map((issue) => (
-                    <article className="project-card issue-card" key={issue.id}>
-                      <div className="issue-card-header">
-                        <div>
-                          <h3>{issue.title}</h3>
-                          <span>{formatDate(issue.createdAt)}</span>
-                        </div>
-                        <div className="issue-badges">
-                          <span className={`priority-pill priority-${issue.priority}`}>
-                            {formatIssuePriority(issue.priority)}
-                          </span>
-                          <span className={`status-pill status-${issue.status}`}>
-                            {formatIssueStatus(issue.status)}
-                          </span>
-                        </div>
+          {!loading && projects.length > 0 ? (
+            <div className="project-entries">
+              {projects.map((project) => {
+                const isSelected = project.id === selectedProjectId;
+
+                return (
+                  <button
+                    className={`project-tile ${isSelected ? 'project-tile-selected' : ''}`}
+                    key={project.id}
+                    onClick={() => setSelectedProjectId(project.id)}
+                    type="button"
+                  >
+                    <div className="project-tile-top">
+                      <div>
+                        <span className="project-tile-title">{project.name}</span>
+                        <span className="project-tile-meta">{formatDate(project.createdAt)}</span>
                       </div>
+                      <span className="project-tile-state">{isSelected ? 'Live' : 'Open'}</span>
+                    </div>
+                    <p className="project-tile-copy">
+                      {project.description || 'No description provided yet.'}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </aside>
 
-                      <div className="status-actions">
-                        {ISSUE_STATUSES.map((status) => (
-                          <button
-                            className={`status-button ${
-                              issue.status === status ? 'status-button-active' : ''
-                            }`}
-                            disabled={
-                              statusUpdatingIssueId === issue.id || issue.status === status
-                            }
-                            key={status}
-                            onClick={() => void handleIssueStatusChange(issue.id, status)}
-                            type="button"
-                          >
-                            {formatIssueStatus(status)}
-                          </button>
+        <section className="workspace-main">
+          {!selectedProject ? (
+            <section className="panel workspace-empty">
+              <p className="eyebrow">Workspace</p>
+              <h2>Pick a project to open the issue workspace</h2>
+              <p className="intro">
+                Choose something from the rail to see backlog, ownership, and progress in one
+                focused view.
+              </p>
+            </section>
+          ) : (
+            <>
+              <section className="panel workspace-hero">
+                <div className="workspace-hero-header">
+                  <div>
+                    <p className="eyebrow">Selected project</p>
+                    <h2>{selectedProject.name}</h2>
+                    <p className="workspace-description">
+                      {selectedProject.description ||
+                        'No description yet. Add one when you want more context for the team.'}
+                    </p>
+                  </div>
+                  <span className="workspace-date">Created {formatDate(selectedProject.createdAt)}</span>
+                </div>
+
+                <div className="summary-grid">
+                  <article className="summary-card">
+                    <span>Open issues</span>
+                    <strong>{openIssueCount}</strong>
+                  </article>
+                  <article className="summary-card">
+                    <span>Done</span>
+                    <strong>{doneIssueCount}</strong>
+                  </article>
+                  <article className="summary-card">
+                    <span>Unassigned</span>
+                    <strong>{unassignedIssueCount}</strong>
+                  </article>
+                </div>
+              </section>
+
+              <section className="panel composer-panel">
+                <div className="section-heading composer-heading">
+                  <div>
+                    <p className="eyebrow">Create issue</p>
+                    <h2>Capture the next task</h2>
+                  </div>
+                </div>
+
+                <form className="project-form issue-form-grid" onSubmit={(event) => void handleIssueSubmit(event)}>
+                  <label className="issue-title-field">
+                    <span>Issue title</span>
+                    <input
+                      value={issueTitle}
+                      onChange={(event) => setIssueTitle(event.target.value)}
+                      placeholder="Ex: Fix login bug"
+                      minLength={2}
+                      maxLength={160}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    <span>Priority</span>
+                    <select
+                      value={issuePriority}
+                      onChange={(event) => setIssuePriority(event.target.value as IssuePriority)}
+                    >
+                      {ISSUE_PRIORITIES.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {formatIssuePriority(priority)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Assignee</span>
+                    <select
+                      value={issueAssigneeId}
+                      onChange={(event) => setIssueAssigneeId(event.target.value)}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button className="issue-submit-button" type="submit" disabled={issueSubmitting}>
+                    {issueSubmitting ? 'Saving...' : 'Create issue'}
+                  </button>
+                </form>
+
+                {issueError ? <p className="message error">{issueError}</p> : null}
+                {usersError ? <p className="message error">{usersError}</p> : null}
+                {issuesLoading ? <p className="message">Loading issues...</p> : null}
+                {usersLoading ? <p className="message">Loading users...</p> : null}
+              </section>
+
+              <div className="status-stack">
+                {groupedIssues.map((group) => (
+                  <section className="panel status-section" key={group.status}>
+                    <div className="status-section-header">
+                      <div>
+                        <div className="status-section-title">
+                          <span className={`status-pill status-${group.status}`}>{group.label}</span>
+                          <strong>{group.items.length}</strong>
+                        </div>
+                        <p className="status-section-copy">{group.description}</p>
+                      </div>
+                    </div>
+
+                    {!issuesLoading && group.items.length === 0 ? (
+                      <p className="message section-empty">No issues in {group.label.toLowerCase()}.</p>
+                    ) : null}
+
+                    {!issuesLoading && group.items.length > 0 ? (
+                      <div className="issue-column">
+                        {group.items.map((issue) => (
+                          <article className="issue-card" key={issue.id}>
+                            <div className="issue-card-header">
+                              <div className="issue-card-copy">
+                                <h3>{issue.title}</h3>
+                                <span>{formatDate(issue.createdAt)}</span>
+                              </div>
+                              <div className="issue-badges">
+                                <span className={`priority-pill priority-${issue.priority}`}>
+                                  {formatIssuePriority(issue.priority)}
+                                </span>
+                                <span className={`status-pill status-${issue.status}`}>
+                                  {formatIssueStatus(issue.status)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="status-actions">
+                              {ISSUE_STATUSES.map((status) => (
+                                <button
+                                  className={`status-button ${
+                                    issue.status === status ? 'status-button-active' : ''
+                                  }`}
+                                  disabled={
+                                    statusUpdatingIssueId === issue.id || issue.status === status
+                                  }
+                                  key={status}
+                                  onClick={() => void handleIssueStatusChange(issue.id, status)}
+                                  type="button"
+                                >
+                                  {formatIssueStatus(status)}
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="issue-assignment">
+                              <p className="message">Assigned to: {getAssigneeName(issue.assigneeId)}</p>
+                              <label className="issue-assignment-control">
+                                <span>Reassign</span>
+                                <select
+                                  value={issue.assigneeId ?? ''}
+                                  disabled={assigneeUpdatingIssueId === issue.id || usersLoading}
+                                  onChange={(event) =>
+                                    void handleIssueAssigneeChange(issue.id, event.target.value || null)
+                                  }
+                                >
+                                  <option value="">Unassigned</option>
+                                  {users.map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                      {user.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                          </article>
                         ))}
                       </div>
-
-                      <div className="issue-assignment">
-                        <p className="message">Assigned to: {getAssigneeName(issue.assigneeId)}</p>
-                        <label className="issue-assignment-control">
-                          <span>Reassign</span>
-                          <select
-                            value={issue.assigneeId ?? ''}
-                            disabled={assigneeUpdatingIssueId === issue.id || usersLoading}
-                            onChange={(event) =>
-                              void handleIssueAssigneeChange(issue.id, event.target.value || null)
-                            }
-                          >
-                            <option value="">Unassigned</option>
-                            {users.map((user) => (
-                              <option key={user.id} value={user.id}>
-                                {user.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+                    ) : null}
+                  </section>
+                ))}
+              </div>
+            </>
           )}
         </section>
       </section>
