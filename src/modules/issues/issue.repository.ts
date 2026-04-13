@@ -54,6 +54,7 @@ export class IssueRepository {
       data: {
         projectId,
         title: input.title,
+        description: input.description,
         priority: input.priority,
         assigneeId: input.assigneeId,
         labels:

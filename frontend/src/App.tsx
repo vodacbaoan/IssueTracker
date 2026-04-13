@@ -69,6 +69,7 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [issueTitle, setIssueTitle] = useState('');
+  const [issueDescription, setIssueDescription] = useState('');
   const [issuePriority, setIssuePriority] = useState<IssuePriority>('medium');
   const [issueAssigneeId, setIssueAssigneeId] = useState('');
   const [issueLabelIds, setIssueLabelIds] = useState<string[]>([]);
@@ -220,11 +221,13 @@ export default function App() {
     try {
       await createIssue(selectedProjectId, {
         title: issueTitle,
+        description: issueDescription || undefined,
         priority: issuePriority,
         assigneeId: issueAssigneeId || null,
         labelIds: issueLabelIds,
       });
       setIssueTitle('');
+      setIssueDescription('');
       setIssuePriority('medium');
       setIssueAssigneeId('');
       setIssueLabelIds([]);
@@ -322,6 +325,7 @@ export default function App() {
     const matchesSearch =
       normalizedSearchQuery.length === 0 ||
       issue.title.toLowerCase().includes(normalizedSearchQuery) ||
+      issue.description?.toLowerCase().includes(normalizedSearchQuery) ||
       getAssigneeName(issue.assigneeId).toLowerCase().includes(normalizedSearchQuery) ||
       issue.labels.some((label) => label.name.toLowerCase().includes(normalizedSearchQuery));
 
@@ -534,6 +538,17 @@ export default function App() {
                     />
                   </label>
 
+                  <label className="issue-description-field">
+                    <span>Description</span>
+                    <textarea
+                      value={issueDescription}
+                      onChange={(event) => setIssueDescription(event.target.value)}
+                      placeholder="Add a little more context so someone else can pick this up quickly."
+                      maxLength={2000}
+                      rows={4}
+                    />
+                  </label>
+
                   <label>
                     <span>Priority</span>
                     <select
@@ -621,7 +636,7 @@ export default function App() {
                     <input
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Search title, assignee, or label"
+                      placeholder="Search title, description, assignee, or label"
                     />
                   </label>
 
@@ -740,6 +755,10 @@ export default function App() {
                                 </span>
                               </div>
                             </div>
+
+                            {issue.description ? (
+                              <p className="issue-description">{issue.description}</p>
+                            ) : null}
 
                             <div className="issue-label-block">
                               <div className="issue-label-list">

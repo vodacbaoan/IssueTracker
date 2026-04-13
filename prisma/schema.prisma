@@ -49,6 +49,7 @@ model Issue {
   assignee   User?         @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
   labels     Label[]
   title      String
+  description String?
   priority   IssuePriority @default(medium)
   status     IssueStatus   @default(todo)
   createdAt  DateTime      @default(now())

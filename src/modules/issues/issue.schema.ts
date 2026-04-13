@@ -9,6 +9,12 @@ const issueLabelIdsSchema = z
 
 export const createIssueBodySchema = z.object({
   title: z.string().min(2).max(160),
+  description: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .transform((description) => (description && description.length > 0 ? description : undefined)),
   priority: z.enum(issuePriorityValues).optional().default('medium'),
   assigneeId: z.string().uuid().nullable().optional().default(null),
   labelIds: issueLabelIdsSchema.optional().default([]),

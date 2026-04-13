@@ -79,6 +79,7 @@ Requests move through the backend in this order:
 ```json
 {
   "title": "Fix login bug",
+  "description": "Users hit a blank screen after submitting valid credentials on Safari.",
   "priority": "high",
   "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2",
   "labelIds": [
@@ -193,6 +194,7 @@ The dashboard lets you:
 - create projects
 - select one project at a time
 - create issues for the selected project
+- add issue descriptions for richer context
 - set issue priority as `low`, `medium`, or `high`
 - assign issues to seeded users or leave them unassigned
 - tag issues with seeded labels

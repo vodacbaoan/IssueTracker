@@ -9,6 +9,7 @@ export interface Issue {
   assigneeId: string | null;
   labels: Label[];
   title: string;
+  description: string | null;
   priority: IssuePriority;
   status: IssueStatus;
   createdAt: string;
@@ -17,6 +18,7 @@ export interface Issue {
 
 export interface CreateIssueInput {
   title: string;
+  description?: string;
   priority: IssuePriority;
   assigneeId: string | null;
   labelIds: string[];

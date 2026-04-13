@@ -471,6 +471,10 @@ textarea:focus-visible {
   grid-column: 1 / -1;
 }
 
+.issue-description-field {
+  grid-column: 1 / -1;
+}
+
 .issue-label-field {
   grid-column: 1 / -1;
 }
@@ -582,6 +586,13 @@ textarea:focus-visible {
 .issue-card-copy span {
   color: var(--text-faint);
   font-size: 0.88rem;
+}
+
+.issue-description {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 .issue-badges,
