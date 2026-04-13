@@ -4,6 +4,7 @@ import { type SyntheticEvent, useEffect, useState } from 'react';
 import { getLabels, type Label } from './api/labels';
 import {
   createIssue,
+  createIssueComment,
   getIssues,
   type Issue,
   type IssuePriority,
@@ -17,6 +18,10 @@ import { getUsers, type User } from './api/users';
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
+}
+
+function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString();
 }
 
 function formatIssueStatus(status: IssueStatus): string {
@@ -91,6 +96,9 @@ export default function App() {
   const [statusUpdatingIssueId, setStatusUpdatingIssueId] = useState<string | null>(null);
   const [assigneeUpdatingIssueId, setAssigneeUpdatingIssueId] = useState<string | null>(null);
   const [labelUpdatingIssueId, setLabelUpdatingIssueId] = useState<string | null>(null);
+  const [commentSubmittingIssueId, setCommentSubmittingIssueId] = useState<string | null>(null);
+  const [commentBodiesByIssueId, setCommentBodiesByIssueId] = useState<Record<string, string>>({});
+  const [commentAuthorIdsByIssueId, setCommentAuthorIdsByIssueId] = useState<Record<string, string>>({});
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
 
   const loadProjects = async (): Promise<void> => {
@@ -179,10 +187,14 @@ export default function App() {
     if (!selectedProjectId) {
       setIssues([]);
       setIssueError(null);
+      setCommentBodiesByIssueId({});
+      setCommentAuthorIdsByIssueId({});
       return;
     }
 
     setIssues([]);
+    setCommentBodiesByIssueId({});
+    setCommentAuthorIdsByIssueId({});
     void loadIssues(selectedProjectId);
   }, [selectedProjectId]);
 
@@ -303,6 +315,40 @@ export default function App() {
     }
   };
 
+  const getCommentAuthorId = (issue: Issue): string =>
+    commentAuthorIdsByIssueId[issue.id] ?? issue.assigneeId ?? users[0]?.id ?? '';
+
+  const handleIssueCommentSubmit = async (issueId: string): Promise<void> => {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    const issue = issues.find((currentIssue) => currentIssue.id === issueId);
+    const authorId = issue ? getCommentAuthorId(issue) : '';
+    const body = commentBodiesByIssueId[issueId]?.trim() ?? '';
+
+    if (!authorId || body.length < 2) {
+      setIssueError('Choose a comment author and enter a comment before posting.');
+      return;
+    }
+
+    setCommentSubmittingIssueId(issueId);
+    setIssueError(null);
+
+    try {
+      await createIssueComment(selectedProjectId, issueId, { authorId, body });
+      setCommentBodiesByIssueId((currentBodies) => ({
+        ...currentBodies,
+        [issueId]: '',
+      }));
+      await loadIssues(selectedProjectId);
+    } catch (updateError) {
+      setIssueError(updateError instanceof Error ? updateError.message : 'Failed to add comment');
+    } finally {
+      setCommentSubmittingIssueId(null);
+    }
+  };
+
   const getAssigneeName = (assigneeId: string | null): string => {
     if (!assigneeId) {
       return 'Unassigned';
@@ -327,7 +373,12 @@ export default function App() {
       issue.title.toLowerCase().includes(normalizedSearchQuery) ||
       issue.description?.toLowerCase().includes(normalizedSearchQuery) ||
       getAssigneeName(issue.assigneeId).toLowerCase().includes(normalizedSearchQuery) ||
-      issue.labels.some((label) => label.name.toLowerCase().includes(normalizedSearchQuery));
+      issue.labels.some((label) => label.name.toLowerCase().includes(normalizedSearchQuery)) ||
+      issue.comments.some(
+        (comment) =>
+          comment.body.toLowerCase().includes(normalizedSearchQuery) ||
+          comment.author.name.toLowerCase().includes(normalizedSearchQuery),
+      );
 
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
@@ -636,7 +687,7 @@ export default function App() {
                     <input
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Search title, description, assignee, or label"
+                      placeholder="Search title, description, comment, assignee, or label"
                     />
                   </label>
 
@@ -849,6 +900,95 @@ export default function App() {
                                   ))}
                                 </select>
                               </label>
+                            </div>
+
+                            <div className="issue-comments">
+                              <div className="issue-comments-header">
+                                <span>Comments</span>
+                                <strong>{issue.comments.length}</strong>
+                              </div>
+
+                              {issue.comments.length > 0 ? (
+                                <div className="comment-list">
+                                  {issue.comments.map((comment) => (
+                                    <article className="comment-item" key={comment.id}>
+                                      <div className="comment-meta">
+                                        <strong>{comment.author.name}</strong>
+                                        <span>{formatDateTime(comment.createdAt)}</span>
+                                      </div>
+                                      <p>{comment.body}</p>
+                                    </article>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="message">No comments yet.</p>
+                              )}
+
+                              {users.length > 0 ? (
+                                <form
+                                  className="comment-form"
+                                  onSubmit={(event) => {
+                                    event.preventDefault();
+                                    void handleIssueCommentSubmit(issue.id);
+                                  }}
+                                >
+                                  <label>
+                                    <span>Comment as</span>
+                                    <select
+                                      value={getCommentAuthorId(issue)}
+                                      disabled={
+                                        commentSubmittingIssueId === issue.id || usersLoading
+                                      }
+                                      onChange={(event) =>
+                                        setCommentAuthorIdsByIssueId((currentAuthorIds) => ({
+                                          ...currentAuthorIds,
+                                          [issue.id]: event.target.value,
+                                        }))
+                                      }
+                                    >
+                                      {users.map((user) => (
+                                        <option key={user.id} value={user.id}>
+                                          {user.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  <label className="comment-body-field">
+                                    <span>Add comment</span>
+                                    <textarea
+                                      value={commentBodiesByIssueId[issue.id] ?? ''}
+                                      disabled={
+                                        commentSubmittingIssueId === issue.id || usersLoading
+                                      }
+                                      onChange={(event) =>
+                                        setCommentBodiesByIssueId((currentBodies) => ({
+                                          ...currentBodies,
+                                          [issue.id]: event.target.value,
+                                        }))
+                                      }
+                                      placeholder="Share context, progress notes, or a handoff update."
+                                      maxLength={2000}
+                                      rows={3}
+                                    />
+                                  </label>
+
+                                  <button
+                                    className="secondary-button comment-submit-button"
+                                    type="submit"
+                                    disabled={
+                                      commentSubmittingIssueId === issue.id ||
+                                      usersLoading ||
+                                      getCommentAuthorId(issue) === '' ||
+                                      (commentBodiesByIssueId[issue.id]?.trim().length ?? 0) < 2
+                                    }
+                                  >
+                                    {commentSubmittingIssueId === issue.id
+                                      ? 'Posting...'
+                                      : 'Add comment'}
+                                  </button>
+                                </form>
+                              ) : null}
                             </div>
                           </article>
                         ))}

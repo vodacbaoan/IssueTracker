@@ -1,5 +1,6 @@
 import { NotFoundError } from '../../lib/errors';
 import type {
+  CreateCommentBody,
   CreateIssueBody,
   UpdateIssueLabelsBody,
 } from './issue.schema';
@@ -26,11 +27,11 @@ export class IssueService {
     }
   }
 
-  private async ensureAssigneeExists(assigneeId: string): Promise<void> {
-    const assignee = await this.issueRepository.findUser(assigneeId);
+  private async ensureUserExists(userId: string, errorMessage: string): Promise<void> {
+    const user = await this.issueRepository.findUser(userId);
 
-    if (!assignee) {
-      throw new NotFoundError('Assignee not found');
+    if (!user) {
+      throw new NotFoundError(errorMessage);
     }
   }
 
@@ -55,7 +56,7 @@ export class IssueService {
     await this.ensureProjectExists(projectId);
 
     if (input.assigneeId) {
-      await this.ensureAssigneeExists(input.assigneeId);
+      await this.ensureUserExists(input.assigneeId, 'Assignee not found');
     }
 
     await this.ensureLabelsExist(input.labelIds);
@@ -97,7 +98,7 @@ export class IssueService {
     }
 
     if (assigneeId) {
-      await this.ensureAssigneeExists(assigneeId);
+      await this.ensureUserExists(assigneeId, 'Assignee not found');
     }
 
     if (issue.assigneeId === assigneeId) {
@@ -132,5 +133,23 @@ export class IssueService {
     }
 
     return this.issueRepository.updateLabels(issueId, input.labelIds);
+  }
+
+  async createComment(
+    projectId: string,
+    issueId: string,
+    input: CreateCommentBody,
+  ): Promise<IssueRecord> {
+    await this.ensureProjectExists(projectId);
+
+    const issue = await this.issueRepository.findByProjectAndId(projectId, issueId);
+
+    if (!issue) {
+      throw new NotFoundError('Issue not found');
+    }
+
+    await this.ensureUserExists(input.authorId, 'Comment author not found');
+
+    return this.issueRepository.createComment(issueId, input);
   }
 }

@@ -4,6 +4,7 @@ import { BadRequestError } from '../../lib/errors';
 import { IssueController } from './issue.controller';
 import { IssueRepository } from './issue.repository';
 import {
+  createCommentBodySchema,
   createIssueBodySchema,
   updateIssueAssigneeBodySchema,
   updateIssueLabelsBodySchema,
@@ -89,8 +90,27 @@ export function createIssueRouter(prisma: PrismaClient): Router {
     next();
   };
 
+  const validateCreateComment = (
+    request: Request,
+    _response: Response,
+    next: NextFunction,
+  ): void => {
+    const validationResult = createCommentBodySchema.safeParse(request.body);
+
+    if (!validationResult.success) {
+      next(
+        new BadRequestError('Request validation failed', validationResult.error.flatten()),
+      );
+      return;
+    }
+
+    request.body = validationResult.data;
+    next();
+  };
+
   router.get('/', issueController.list);
   router.post('/', validateCreateIssue, issueController.create);
+  router.post('/:issueId/comments', validateCreateComment, issueController.createComment);
   router.patch('/:issueId/status', validateUpdateStatus, issueController.updateStatus);
   router.patch('/:issueId/assignee', validateUpdateAssignee, issueController.updateAssignee);
   router.patch('/:issueId/labels', validateUpdateLabels, issueController.updateLabels);

@@ -613,6 +613,89 @@ textarea:focus-visible {
   border-top: 1px solid rgba(16, 35, 63, 0.06);
 }
 
+.issue-comments {
+  display: grid;
+  gap: 14px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(16, 35, 63, 0.06);
+}
+
+.issue-comments-header,
+.comment-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.issue-comments-header span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.issue-comments-header strong {
+  color: var(--text);
+}
+
+.comment-list,
+.comment-form {
+  display: grid;
+  gap: 12px;
+}
+
+.comment-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.comment-form select,
+.comment-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+.comment-form textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.comment-submit-button {
+  justify-self: flex-start;
+}
+
+.comment-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.comment-meta strong {
+  color: var(--text);
+}
+
+.comment-meta span {
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+.comment-item p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
 .issue-label-editor > span {
   font-size: 0.76rem;
   font-weight: 700;
@@ -718,7 +801,8 @@ textarea:focus-visible {
   }
 
   .issue-submit-button,
-  .filter-clear-button {
+  .filter-clear-button,
+  .comment-submit-button {
     width: 100%;
   }
 }

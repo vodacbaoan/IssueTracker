@@ -36,6 +36,10 @@ interface SeedProject {
     status: IssueStatus;
     assigneeEmail?: (typeof seedUsers)[number]['email'];
     labelNames?: Array<(typeof seedLabels)[number]['name']>;
+    comments?: Array<{
+      authorEmail: (typeof seedUsers)[number]['email'];
+      body: string;
+    }>;
   }>;
 }
 
@@ -51,6 +55,12 @@ const seedProjects: SeedProject[] = [
         status: 'todo',
         assigneeEmail: 'mia.chen@example.com',
         labelNames: ['Content', 'Research'],
+        comments: [
+          {
+            authorEmail: 'mia.chen@example.com',
+            body: 'I have the campaign brief already. Next step is narrowing the hero message down to two strong headline options.',
+          },
+        ],
       },
       {
         title: 'Ship responsive navigation polish',
@@ -59,6 +69,16 @@ const seedProjects: SeedProject[] = [
         status: 'in_progress',
         assigneeEmail: 'noah.patel@example.com',
         labelNames: ['Frontend', 'UX'],
+        comments: [
+          {
+            authorEmail: 'noah.patel@example.com',
+            body: 'Tablet spacing is in better shape now. I still need to revisit the drawer close animation on narrow screens.',
+          },
+          {
+            authorEmail: 'sofia.nguyen@example.com',
+            body: 'Happy to sanity-check the keyboard focus states once the animation pass is done.',
+          },
+        ],
       },
       {
         title: 'Audit homepage image compression',
@@ -80,6 +100,12 @@ const seedProjects: SeedProject[] = [
         status: 'todo',
         assigneeEmail: 'leo.tran@example.com',
         labelNames: ['Dashboard', 'UX'],
+        comments: [
+          {
+            authorEmail: 'leo.tran@example.com',
+            body: 'We should keep the first version intentionally lightweight: low stock count, risky SKUs, and a quick warehouse breakdown.',
+          },
+        ],
       },
       {
         title: 'Connect warehouse activity feed',
@@ -88,6 +114,12 @@ const seedProjects: SeedProject[] = [
         status: 'in_progress',
         assigneeEmail: 'sofia.nguyen@example.com',
         labelNames: ['Dashboard', 'Frontend'],
+        comments: [
+          {
+            authorEmail: 'sofia.nguyen@example.com',
+            body: 'Event wiring is in progress. I am waiting on one final payload example for returns before I lock the mapping.',
+          },
+        ],
       },
       {
         title: 'Create initial table filters',
@@ -109,6 +141,12 @@ const seedProjects: SeedProject[] = [
         status: 'todo',
         assigneeEmail: 'sofia.nguyen@example.com',
         labelNames: ['Bug', 'Frontend'],
+        comments: [
+          {
+            authorEmail: 'sofia.nguyen@example.com',
+            body: 'The detail panel should prioritize requester context and latest activity so agents can respond without hopping across screens.',
+          },
+        ],
       },
       {
         title: 'Add ticket status badges',
@@ -117,6 +155,12 @@ const seedProjects: SeedProject[] = [
         status: 'in_progress',
         assigneeEmail: 'mia.chen@example.com',
         labelNames: ['Frontend', 'UX'],
+        comments: [
+          {
+            authorEmail: 'mia.chen@example.com',
+            body: 'Badge colors are in a good place. I want one more pass on contrast before calling this done.',
+          },
+        ],
       },
       {
         title: 'Seed starter support categories',
@@ -173,6 +217,24 @@ async function main(): Promise<void> {
                       .map((labelName) => labelIdsByName.get(labelName))
                       .filter((labelId): labelId is string => Boolean(labelId))
                       .map((labelId) => ({ id: labelId })),
+                  }
+                : undefined,
+            comments:
+              issue.comments && issue.comments.length > 0
+                ? {
+                    create: issue.comments
+                      .map((comment) => ({
+                        authorId: userIdsByEmail.get(comment.authorEmail),
+                        body: comment.body,
+                      }))
+                      .filter(
+                        (
+                          comment,
+                        ): comment is {
+                          authorId: string;
+                          body: string;
+                        } => Boolean(comment.authorId),
+                      ),
                   }
                 : undefined,
           })),

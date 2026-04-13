@@ -1,16 +1,22 @@
 import type {
   IssueStatus,
-  Label,
   Prisma,
   PrismaClient,
   Project,
   User,
+  Label,
 } from '@prisma/client';
-import type { CreateIssueBody } from './issue.schema';
+import type { CreateCommentBody, CreateIssueBody } from './issue.schema';
 
 const issueInclude = {
   labels: {
     orderBy: { name: 'asc' },
+  },
+  comments: {
+    orderBy: { createdAt: 'asc' },
+    include: {
+      author: true,
+    },
   },
 } satisfies Prisma.IssueInclude;
 
@@ -100,6 +106,21 @@ export class IssueRepository {
       data: {
         labels: {
           set: labelIds.map((labelId) => ({ id: labelId })),
+        },
+      },
+      include: issueInclude,
+    });
+  }
+
+  createComment(issueId: string, input: CreateCommentBody): Promise<IssueRecord> {
+    return this.prisma.issue.update({
+      where: { id: issueId },
+      data: {
+        comments: {
+          create: {
+            authorId: input.authorId,
+            body: input.body,
+          },
         },
       },
       include: issueInclude,

@@ -61,6 +61,7 @@ Requests move through the backend in this order:
 - `POST /api/v1/projects`
 - `GET /api/v1/projects/:projectId/issues`
 - `POST /api/v1/projects/:projectId/issues`
+- `POST /api/v1/projects/:projectId/issues/:issueId/comments`
 - `PATCH /api/v1/projects/:projectId/issues/:issueId/assignee`
 - `PATCH /api/v1/projects/:projectId/issues/:issueId/labels`
 - `PATCH /api/v1/projects/:projectId/issues/:issueId/status`
@@ -94,6 +95,15 @@ Requests move through the backend in this order:
 ```json
 {
   "assigneeId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2"
+}
+```
+
+### Create issue comment body
+
+```json
+{
+  "authorId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2",
+  "body": "I reproduced this in Safari 18 and the blank screen starts right after the redirect."
 }
 ```
 
@@ -161,7 +171,7 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-### 5. Seed sample users, labels, and projects
+### 5. Seed sample users, labels, projects, and issue comments
 
 ```bash
 npm run prisma:seed
@@ -195,6 +205,7 @@ The dashboard lets you:
 - select one project at a time
 - create issues for the selected project
 - add issue descriptions for richer context
+- leave comments on issues with one of the seeded users as the author
 - set issue priority as `low`, `medium`, or `high`
 - assign issues to seeded users or leave them unassigned
 - tag issues with seeded labels
@@ -226,3 +237,4 @@ npm run frontend:start
 - how to keep the project simple without losing structure
 - how projects and issues work together in a small issue-tracker workflow
 - how labels and filters make a simple issue tracker easier to triage
+- how issue comments add context and lightweight collaboration to a shared board

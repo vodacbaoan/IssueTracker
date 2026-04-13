@@ -32,7 +32,13 @@ export const updateIssueLabelsBodySchema = z.object({
   labelIds: issueLabelIdsSchema,
 });
 
+export const createCommentBodySchema = z.object({
+  authorId: z.string().uuid(),
+  body: z.string().trim().min(2).max(2000),
+});
+
 export type CreateIssueBody = z.infer<typeof createIssueBodySchema>;
 export type UpdateIssueStatusBody = z.infer<typeof updateIssueStatusBodySchema>;
 export type UpdateIssueAssigneeBody = z.infer<typeof updateIssueAssigneeBodySchema>;
 export type UpdateIssueLabelsBody = z.infer<typeof updateIssueLabelsBodySchema>;
+export type CreateCommentBody = z.infer<typeof createCommentBodySchema>;
