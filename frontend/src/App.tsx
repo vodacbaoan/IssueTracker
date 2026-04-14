@@ -1,6 +1,14 @@
 'use client';
 
 import { type SyntheticEvent, useEffect, useState } from 'react';
+import {
+  getCurrentUser,
+  login,
+  logout,
+  refreshSession,
+  signup,
+} from './api/auth';
+import { ApiError } from './api/client';
 import { getLabels, type Label } from './api/labels';
 import {
   createIssue,
@@ -56,6 +64,10 @@ function toggleIdInList(currentIds: string[], id: string): string[] {
     : [...currentIds, id];
 }
 
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
+  return error instanceof Error ? error.message : fallbackMessage;
+}
+
 const ISSUE_PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 const ISSUE_STATUSES: IssueStatus[] = ['todo', 'in_progress', 'done'];
 
@@ -66,6 +78,14 @@ const ISSUE_SECTION_COPY: Record<IssueStatus, string> = {
 };
 
 export default function App() {
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authInitializing, setAuthInitializing] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -98,7 +118,6 @@ export default function App() {
   const [labelUpdatingIssueId, setLabelUpdatingIssueId] = useState<string | null>(null);
   const [commentSubmittingIssueId, setCommentSubmittingIssueId] = useState<string | null>(null);
   const [commentBodiesByIssueId, setCommentBodiesByIssueId] = useState<Record<string, string>>({});
-  const [commentAuthorIdsByIssueId, setCommentAuthorIdsByIssueId] = useState<Record<string, string>>({});
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
 
   const loadProjects = async (): Promise<void> => {
@@ -158,16 +177,69 @@ export default function App() {
   };
 
   useEffect(() => {
-    void loadProjects();
-    void loadUsers();
-    void loadLabels();
+    const initializeAuth = async (): Promise<void> => {
+      setAuthInitializing(true);
+      setAuthError(null);
+
+      try {
+        const session = await getCurrentUser();
+        setAuthUser(session.user);
+      } catch (authLoadError) {
+        if (authLoadError instanceof ApiError && authLoadError.status === 401) {
+          try {
+            await refreshSession();
+            const session = await getCurrentUser();
+            setAuthUser(session.user);
+          } catch (refreshError) {
+            setAuthUser(null);
+            setAuthError(
+              refreshError instanceof ApiError && refreshError.status === 401
+                ? null
+                : getErrorMessage(refreshError, 'Failed to restore your session'),
+            );
+          }
+        } else {
+          setAuthUser(null);
+          setAuthError(getErrorMessage(authLoadError, 'Failed to restore your session'));
+        }
+      } finally {
+        setAuthInitializing(false);
+      }
+    };
+
+    void initializeAuth();
   }, []);
 
   useEffect(() => {
+    if (!authUser) {
+      setProjects([]);
+      setUsers([]);
+      setLabels([]);
+      setIssues([]);
+      setSelectedProjectId(null);
+      setCommentBodiesByIssueId({});
+      setLoading(false);
+      setUsersLoading(false);
+      setLabelsLoading(false);
+      setIssuesLoading(false);
+      return;
+    }
+
+    void loadProjects();
+    void loadUsers();
+    void loadLabels();
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser) {
+      setIsProjectFormOpen(false);
+      return;
+    }
+
     if (!loading && projects.length === 0) {
       setIsProjectFormOpen(true);
     }
-  }, [loading, projects.length]);
+  }, [authUser, loading, projects.length]);
 
   useEffect(() => {
     setSelectedProjectId((currentProjectId) => {
@@ -184,19 +256,73 @@ export default function App() {
   }, [projects]);
 
   useEffect(() => {
-    if (!selectedProjectId) {
+    if (!authUser || !selectedProjectId) {
       setIssues([]);
       setIssueError(null);
       setCommentBodiesByIssueId({});
-      setCommentAuthorIdsByIssueId({});
       return;
     }
 
     setIssues([]);
     setCommentBodiesByIssueId({});
-    setCommentAuthorIdsByIssueId({});
     void loadIssues(selectedProjectId);
-  }, [selectedProjectId]);
+  }, [authUser, selectedProjectId]);
+
+  const handleProtectedError = (error: unknown, fallbackMessage: string): string => {
+    if (error instanceof ApiError && error.status === 401) {
+      setAuthUser(null);
+      setAuthMode('login');
+      setAuthError('Your session expired. Sign in again.');
+      return 'Your session expired. Sign in again.';
+    }
+
+    return getErrorMessage(error, fallbackMessage);
+  };
+
+  const handleAuthSubmit = async (event: SyntheticEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    setAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      const response =
+        authMode === 'signup'
+          ? await signup({
+              name: authName,
+              email: authEmail,
+              password: authPassword,
+            })
+          : await login({
+              email: authEmail,
+              password: authPassword,
+            });
+
+      setAuthUser(response.user);
+      setAuthName('');
+      setAuthEmail('');
+      setAuthPassword('');
+    } catch (submitError) {
+      setAuthError(getErrorMessage(submitError, 'Failed to sign in'));
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  const handleLogout = async (): Promise<void> => {
+    setAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      await logout();
+      setAuthUser(null);
+      setSelectedProjectId(null);
+      setCommentBodiesByIssueId({});
+    } catch (logoutError) {
+      setAuthError(getErrorMessage(logoutError, 'Failed to sign out'));
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -214,7 +340,7 @@ export default function App() {
       setSelectedProjectId(project.id);
       await loadProjects();
     } catch (submitError) {
-      setProjectError(submitError instanceof Error ? submitError.message : 'Failed to create project');
+      setProjectError(handleProtectedError(submitError, 'Failed to create project'));
     } finally {
       setSubmitting(false);
     }
@@ -245,7 +371,7 @@ export default function App() {
       setIssueLabelIds([]);
       await loadIssues(selectedProjectId);
     } catch (submitError) {
-      setIssueError(submitError instanceof Error ? submitError.message : 'Failed to create issue');
+      setIssueError(handleProtectedError(submitError, 'Failed to create issue'));
     } finally {
       setIssueSubmitting(false);
     }
@@ -263,7 +389,7 @@ export default function App() {
       await updateIssueStatus(selectedProjectId, issueId, status);
       await loadIssues(selectedProjectId);
     } catch (updateError) {
-      setIssueError(updateError instanceof Error ? updateError.message : 'Failed to update issue');
+      setIssueError(handleProtectedError(updateError, 'Failed to update issue'));
     } finally {
       setStatusUpdatingIssueId(null);
     }
@@ -284,9 +410,7 @@ export default function App() {
       await updateIssueAssignee(selectedProjectId, issueId, assigneeId);
       await loadIssues(selectedProjectId);
     } catch (updateError) {
-      setIssueError(
-        updateError instanceof Error ? updateError.message : 'Failed to update assignment',
-      );
+      setIssueError(handleProtectedError(updateError, 'Failed to update assignment'));
     } finally {
       setAssigneeUpdatingIssueId(null);
     }
@@ -307,28 +431,21 @@ export default function App() {
       await updateIssueLabels(selectedProjectId, issueId, labelIds);
       await loadIssues(selectedProjectId);
     } catch (updateError) {
-      setIssueError(
-        updateError instanceof Error ? updateError.message : 'Failed to update labels',
-      );
+      setIssueError(handleProtectedError(updateError, 'Failed to update labels'));
     } finally {
       setLabelUpdatingIssueId(null);
     }
   };
 
-  const getCommentAuthorId = (issue: Issue): string =>
-    commentAuthorIdsByIssueId[issue.id] ?? issue.assigneeId ?? users[0]?.id ?? '';
-
   const handleIssueCommentSubmit = async (issueId: string): Promise<void> => {
-    if (!selectedProjectId) {
+    if (!selectedProjectId || !authUser) {
       return;
     }
 
-    const issue = issues.find((currentIssue) => currentIssue.id === issueId);
-    const authorId = issue ? getCommentAuthorId(issue) : '';
     const body = commentBodiesByIssueId[issueId]?.trim() ?? '';
 
-    if (!authorId || body.length < 2) {
-      setIssueError('Choose a comment author and enter a comment before posting.');
+    if (body.length < 2) {
+      setIssueError('Enter a comment before posting.');
       return;
     }
 
@@ -336,14 +453,14 @@ export default function App() {
     setIssueError(null);
 
     try {
-      await createIssueComment(selectedProjectId, issueId, { authorId, body });
+      await createIssueComment(selectedProjectId, issueId, { body });
       setCommentBodiesByIssueId((currentBodies) => ({
         ...currentBodies,
         [issueId]: '',
       }));
       await loadIssues(selectedProjectId);
     } catch (updateError) {
-      setIssueError(updateError instanceof Error ? updateError.message : 'Failed to add comment');
+      setIssueError(handleProtectedError(updateError, 'Failed to add comment'));
     } finally {
       setCommentSubmittingIssueId(null);
     }
@@ -401,6 +518,106 @@ export default function App() {
     .filter((value) => value !== '' && value !== 'all')
     .length;
 
+  if (authInitializing) {
+    return (
+      <main className="page-shell auth-shell">
+        <section className="panel auth-panel">
+          <p className="eyebrow">Authentication</p>
+          <h1>Restoring your workspace</h1>
+          <p className="intro">
+            Checking whether you already have an active session before loading the dashboard.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <main className="page-shell auth-shell">
+        <section className="panel auth-panel">
+          <div className="auth-panel-copy">
+            <p className="eyebrow">Issue tracker</p>
+            <h1>{authMode === 'login' ? 'Sign in to your workspace' : 'Create your account'}</h1>
+            <p className="intro">
+              Use a real account so comments and write actions are tied to your identity.
+            </p>
+          </div>
+
+          <div className="auth-mode-switch">
+            <button
+              className={`toggle-button ${authMode === 'login' ? 'toggle-button-active' : ''}`}
+              onClick={() => setAuthMode('login')}
+              type="button"
+            >
+              Log in
+            </button>
+            <button
+              className={`toggle-button ${authMode === 'signup' ? 'toggle-button-active' : ''}`}
+              onClick={() => setAuthMode('signup')}
+              type="button"
+            >
+              Sign up
+            </button>
+          </div>
+
+          <form className="project-form auth-form" onSubmit={(event) => void handleAuthSubmit(event)}>
+            {authMode === 'signup' ? (
+              <label>
+                <span>Name</span>
+                <input
+                  value={authName}
+                  onChange={(event) => setAuthName(event.target.value)}
+                  placeholder="Ex: Mia Chen"
+                  minLength={2}
+                  maxLength={120}
+                  required
+                />
+              </label>
+            ) : null}
+
+            <label>
+              <span>Email</span>
+              <input
+                value={authEmail}
+                onChange={(event) => setAuthEmail(event.target.value)}
+                placeholder="you@example.com"
+                type="email"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Password</span>
+              <input
+                value={authPassword}
+                onChange={(event) => setAuthPassword(event.target.value)}
+                placeholder="At least 8 characters"
+                type="password"
+                minLength={8}
+                maxLength={72}
+                required
+              />
+            </label>
+
+            <button type="submit" disabled={authSubmitting}>
+              {authSubmitting
+                ? authMode === 'login'
+                  ? 'Signing in...'
+                  : 'Creating account...'
+                : authMode === 'login'
+                  ? 'Sign in'
+                  : 'Create account'}
+            </button>
+          </form>
+
+          <p className="message">Seeded demo users all use the password `Password123!`.</p>
+          {authError ? <p className="message error">{authError}</p> : null}
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="page-shell">
       <header className="panel dashboard-header">
@@ -413,15 +630,32 @@ export default function App() {
           </p>
         </div>
 
-        <div className="header-stats">
-          <article className="stat-chip">
-            <span>Projects</span>
-            <strong>{loading ? '...' : projects.length}</strong>
-          </article>
-          <article className="stat-chip">
-            <span>People</span>
-            <strong>{usersLoading ? '...' : users.length}</strong>
-          </article>
+        <div className="header-meta">
+          <div className="header-stats">
+            <article className="stat-chip">
+              <span>Projects</span>
+              <strong>{loading ? '...' : projects.length}</strong>
+            </article>
+            <article className="stat-chip">
+              <span>People</span>
+              <strong>{usersLoading ? '...' : users.length}</strong>
+            </article>
+          </div>
+
+          <div className="session-controls">
+            <article className="stat-chip stat-chip-compact">
+              <span>Signed in as</span>
+              <strong>{authUser.name}</strong>
+            </article>
+            <button
+              className="secondary-button"
+              disabled={authSubmitting}
+              onClick={() => void handleLogout()}
+              type="button"
+            >
+              {authSubmitting ? 'Signing out...' : 'Sign out'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -924,7 +1158,7 @@ export default function App() {
                                 <p className="message">No comments yet.</p>
                               )}
 
-                              {users.length > 0 ? (
+                              {authUser ? (
                                 <form
                                   className="comment-form"
                                   onSubmit={(event) => {
@@ -932,35 +1166,15 @@ export default function App() {
                                     void handleIssueCommentSubmit(issue.id);
                                   }}
                                 >
-                                  <label>
-                                    <span>Comment as</span>
-                                    <select
-                                      value={getCommentAuthorId(issue)}
-                                      disabled={
-                                        commentSubmittingIssueId === issue.id || usersLoading
-                                      }
-                                      onChange={(event) =>
-                                        setCommentAuthorIdsByIssueId((currentAuthorIds) => ({
-                                          ...currentAuthorIds,
-                                          [issue.id]: event.target.value,
-                                        }))
-                                      }
-                                    >
-                                      {users.map((user) => (
-                                        <option key={user.id} value={user.id}>
-                                          {user.name}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                  <p className="comment-author-note">
+                                    Commenting as <strong>{authUser.name}</strong>
+                                  </p>
 
                                   <label className="comment-body-field">
                                     <span>Add comment</span>
                                     <textarea
                                       value={commentBodiesByIssueId[issue.id] ?? ''}
-                                      disabled={
-                                        commentSubmittingIssueId === issue.id || usersLoading
-                                      }
+                                      disabled={commentSubmittingIssueId === issue.id}
                                       onChange={(event) =>
                                         setCommentBodiesByIssueId((currentBodies) => ({
                                           ...currentBodies,
@@ -978,8 +1192,6 @@ export default function App() {
                                     type="submit"
                                     disabled={
                                       commentSubmittingIssueId === issue.id ||
-                                      usersLoading ||
-                                      getCommentAuthorId(issue) === '' ||
                                       (commentBodiesByIssueId[issue.id]?.trim().length ?? 0) < 2
                                     }
                                   >

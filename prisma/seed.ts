@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import bcrypt from 'bcryptjs';
 import type { IssuePriority, IssueStatus } from '@prisma/client';
 import { createPrismaClient } from '../src/db/prisma';
 
@@ -16,6 +17,8 @@ const seedUsers = [
   { name: 'Sofia Nguyen', email: 'sofia.nguyen@example.com' },
   { name: 'Leo Tran', email: 'leo.tran@example.com' },
 ] as const;
+
+const demoUserPassword = 'Password123!';
 
 const seedLabels = [
   { name: 'Bug' },
@@ -182,8 +185,12 @@ async function main(): Promise<void> {
   const labelIdsByName = new Map<string, string>();
 
   for (const user of seedUsers) {
+    const passwordHash = await bcrypt.hash(demoUserPassword, 10);
     const createdUser = await prisma.user.create({
-      data: user,
+      data: {
+        ...user,
+        passwordHash,
+      },
     });
 
     userIdsByEmail.set(createdUser.email, createdUser.id);

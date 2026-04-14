@@ -33,7 +33,6 @@ export const updateIssueLabelsBodySchema = z.object({
 });
 
 export const createCommentBodySchema = z.object({
-  authorId: z.string().uuid(),
   body: z.string().trim().min(2).max(2000),
 });
 

@@ -6,6 +6,7 @@ import type {
   UpdateIssueLabelsBody,
   UpdateIssueStatusBody,
 } from './issue.schema';
+import { UnauthorizedError } from '../../lib/errors';
 import type { IssueService } from './issue.service';
 
 export class IssueController {
@@ -96,7 +97,13 @@ export class IssueController {
   ): Promise<void> => {
     try {
       const { projectId, issueId } = request.params as { projectId: string; issueId: string };
-      const issue = await this.issueService.createComment(projectId, issueId, request.body);
+      const userId = request.auth?.userId;
+
+      if (!userId) {
+        throw new UnauthorizedError('Authentication required');
+      }
+
+      const issue = await this.issueService.createComment(projectId, issueId, userId, request.body);
       response.status(201).json(issue);
     } catch (error) {
       next(error);

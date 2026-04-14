@@ -1,12 +1,12 @@
 import type { PrismaClient } from '@prisma/client';
-import { Router, type NextFunction, type Request, type Response } from 'express';
+import { Router, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import { BadRequestError } from '../../lib/errors';
 import { ProjectController } from './project.controller';
 import { ProjectRepository } from './project.repository';
 import { createProjectBodySchema } from './project.schema';
 import { ProjectService } from './project.service';
 
-export function createProjectRouter(prisma: PrismaClient): Router {
+export function createProjectRouter(prisma: PrismaClient, requireAuth: RequestHandler): Router {
   const router = Router();
   const projectRepository = new ProjectRepository(prisma);
   const projectService = new ProjectService(projectRepository);
@@ -24,13 +24,13 @@ export function createProjectRouter(prisma: PrismaClient): Router {
       );
       return;
     }
-    
+
     request.body = validationResult.data;
     next();
   };
 
   router.get('/', projectController.list);
-  router.post('/', validateCreateProject, projectController.create);
+  router.post('/', requireAuth, validateCreateProject, projectController.create);
 
   return router;
 }

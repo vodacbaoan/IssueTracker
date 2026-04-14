@@ -3,10 +3,10 @@ import type {
   Prisma,
   PrismaClient,
   Project,
-  User,
   Label,
 } from '@prisma/client';
 import type { CreateCommentBody, CreateIssueBody } from './issue.schema';
+import { publicUserSelect } from '../users/user.types';
 
 const issueInclude = {
   labels: {
@@ -15,7 +15,9 @@ const issueInclude = {
   comments: {
     orderBy: { createdAt: 'asc' },
     include: {
-      author: true,
+      author: {
+        select: publicUserSelect,
+      },
     },
   },
 } satisfies Prisma.IssueInclude;
@@ -31,9 +33,10 @@ export class IssueRepository {
     });
   }
 
-  findUser(userId: string): Promise<User | null> {
+  findUser(userId: string): Promise<{ id: string } | null> {
     return this.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true },
     });
   }
 
@@ -112,7 +115,10 @@ export class IssueRepository {
     });
   }
 
-  createComment(issueId: string, input: CreateCommentBody): Promise<IssueRecord> {
+  createComment(
+    issueId: string,
+    input: CreateCommentBody & { authorId: string },
+  ): Promise<IssueRecord> {
     return this.prisma.issue.update({
       where: { id: issueId },
       data: {

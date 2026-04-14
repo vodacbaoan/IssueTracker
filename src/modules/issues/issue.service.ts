@@ -138,6 +138,7 @@ export class IssueService {
   async createComment(
     projectId: string,
     issueId: string,
+    authorId: string,
     input: CreateCommentBody,
   ): Promise<IssueRecord> {
     await this.ensureProjectExists(projectId);
@@ -148,8 +149,11 @@ export class IssueService {
       throw new NotFoundError('Issue not found');
     }
 
-    await this.ensureUserExists(input.authorId, 'Comment author not found');
+    await this.ensureUserExists(authorId, 'Comment author not found');
 
-    return this.issueRepository.createComment(issueId, input);
+    return this.issueRepository.createComment(issueId, {
+      ...input,
+      authorId,
+    });
   }
 }

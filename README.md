@@ -30,6 +30,7 @@ A beginner-friendly full-stack starter that keeps the backend layered and uses E
     |-- db
     |-- lib
     |-- modules
+    |   |-- auth
     |   |-- health
     |   |-- issues
     |   |-- labels
@@ -55,6 +56,11 @@ Requests move through the backend in this order:
 ## API
 
 - `GET /api/v1/health`
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
 - `GET /api/v1/labels`
 - `GET /api/v1/users`
 - `GET /api/v1/projects`
@@ -72,6 +78,25 @@ Requests move through the backend in this order:
 {
   "name": "CRM Dashboard",
   "description": "Initial dashboard for account managers."
+}
+```
+
+### Signup body
+
+```json
+{
+  "name": "Mia Chen",
+  "email": "mia.chen@example.com",
+  "password": "Password123!"
+}
+```
+
+### Login body
+
+```json
+{
+  "email": "mia.chen@example.com",
+  "password": "Password123!"
 }
 ```
 
@@ -102,7 +127,6 @@ Requests move through the backend in this order:
 
 ```json
 {
-  "authorId": "0f463f59-9ac7-47ca-a34b-b22b43ea79d2",
   "body": "I reproduced this in Safari 18 and the blank screen starts right after the redirect."
 }
 ```
@@ -137,7 +161,10 @@ Use `.env.example` and set:
 - `PORT`
 - `DATABASE_URL`
 - `FRONTEND_ORIGIN`
-- `LOG_LEVEL`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `ACCESS_TOKEN_TTL_MINUTES`
+- `REFRESH_TOKEN_TTL_DAYS`
 
 ### Frontend `frontend/.env`
 
@@ -177,6 +204,8 @@ npm run prisma:migrate
 npm run prisma:seed
 ```
 
+Seeded demo users all use the password `Password123!`.
+
 ### 6. Start the backend
 
 ```bash
@@ -201,11 +230,13 @@ The frontend runs on `http://localhost:5173`.
 
 The dashboard lets you:
 
+- sign up and log in with real accounts
 - create projects
 - select one project at a time
 - create issues for the selected project
 - add issue descriptions for richer context
-- leave comments on issues with one of the seeded users as the author
+- leave comments on issues as the currently signed-in user
+- rely on HttpOnly cookie auth for all write actions
 - set issue priority as `low`, `medium`, or `high`
 - assign issues to seeded users or leave them unassigned
 - tag issues with seeded labels
@@ -232,6 +263,7 @@ npm run frontend:start
 ## What This Starter Teaches
 
 - how a Next.js frontend calls an Express backend
+- how cookie-based JWT auth can protect write actions without turning the app into route-heavy SSR
 - how Prisma connects backend code to PostgreSQL
 - how one feature is split into route, controller, service, and repository
 - how to keep the project simple without losing structure

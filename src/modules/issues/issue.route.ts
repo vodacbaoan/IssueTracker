@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import { Router, type NextFunction, type Request, type Response } from 'express';
+import { Router, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import { BadRequestError } from '../../lib/errors';
 import { IssueController } from './issue.controller';
 import { IssueRepository } from './issue.repository';
@@ -12,7 +12,7 @@ import {
 } from './issue.schema';
 import { IssueService } from './issue.service';
 
-export function createIssueRouter(prisma: PrismaClient): Router {
+export function createIssueRouter(prisma: PrismaClient, requireAuth: RequestHandler): Router {
   const router = Router({ mergeParams: true });
   const issueRepository = new IssueRepository(prisma);
   const issueService = new IssueService(issueRepository);
@@ -109,11 +109,11 @@ export function createIssueRouter(prisma: PrismaClient): Router {
   };
 
   router.get('/', issueController.list);
-  router.post('/', validateCreateIssue, issueController.create);
-  router.post('/:issueId/comments', validateCreateComment, issueController.createComment);
-  router.patch('/:issueId/status', validateUpdateStatus, issueController.updateStatus);
-  router.patch('/:issueId/assignee', validateUpdateAssignee, issueController.updateAssignee);
-  router.patch('/:issueId/labels', validateUpdateLabels, issueController.updateLabels);
+  router.post('/', requireAuth, validateCreateIssue, issueController.create);
+  router.post('/:issueId/comments', requireAuth, validateCreateComment, issueController.createComment);
+  router.patch('/:issueId/status', requireAuth, validateUpdateStatus, issueController.updateStatus);
+  router.patch('/:issueId/assignee', requireAuth, validateUpdateAssignee, issueController.updateAssignee);
+  router.patch('/:issueId/labels', requireAuth, validateUpdateLabels, issueController.updateLabels);
 
   return router;
 }
