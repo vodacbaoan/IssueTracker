@@ -6,7 +6,7 @@ RUN apk add --no-cache openssl
 
 COPY package*.json prisma.config.ts ./
 COPY prisma ./prisma
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY . .
 

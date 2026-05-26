@@ -119,6 +119,7 @@ export default function App() {
   const [commentSubmittingIssueId, setCommentSubmittingIssueId] = useState<string | null>(null);
   const [commentBodiesByIssueId, setCommentBodiesByIssueId] = useState<Record<string, string>>({});
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
+  const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
 
   const loadProjects = async (): Promise<void> => {
     setLoading(true);
@@ -256,6 +257,8 @@ export default function App() {
   }, [projects]);
 
   useEffect(() => {
+    setIsIssueFormOpen(false);
+
     if (!authUser || !selectedProjectId) {
       setIssues([]);
       setIssueError(null);
@@ -369,6 +372,7 @@ export default function App() {
       setIssuePriority('medium');
       setIssueAssigneeId('');
       setIssueLabelIds([]);
+      setIsIssueFormOpen(false);
       await loadIssues(selectedProjectId);
     } catch (submitError) {
       setIssueError(handleProtectedError(submitError, 'Failed to create issue'));
@@ -783,7 +787,20 @@ export default function App() {
                         'No description yet. Add one when you want more context for the team.'}
                     </p>
                   </div>
-                  <span className="workspace-date">Created {formatDate(selectedProject.createdAt)}</span>
+                  <div className="workspace-actions">
+                    <span className="workspace-date">Created {formatDate(selectedProject.createdAt)}</span>
+                    <button
+                      aria-controls="new-issue-panel"
+                      aria-expanded={isIssueFormOpen}
+                      className={`toggle-button workspace-issue-toggle ${
+                        isIssueFormOpen ? 'toggle-button-active' : ''
+                      }`}
+                      onClick={() => setIsIssueFormOpen((currentState) => !currentState)}
+                      type="button"
+                    >
+                      {isIssueFormOpen ? 'Hide form' : 'New issue'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="summary-grid">
@@ -802,15 +819,16 @@ export default function App() {
                 </div>
               </section>
 
-              <section className="panel composer-panel">
-                <div className="section-heading composer-heading">
-                  <div>
-                    <p className="eyebrow">Create issue</p>
-                    <h2>Capture the next task</h2>
+              {isIssueFormOpen ? (
+                <section className="panel composer-panel" id="new-issue-panel">
+                  <div className="section-heading composer-heading">
+                    <div>
+                      <p className="eyebrow">Create issue</p>
+                      <h2>Capture the next task</h2>
+                    </div>
                   </div>
-                </div>
 
-                <form className="project-form issue-form-grid" onSubmit={(event) => void handleIssueSubmit(event)}>
+                  <form className="project-form issue-form-grid" onSubmit={(event) => void handleIssueSubmit(event)}>
                   <label className="issue-title-field">
                     <span>Issue title</span>
                     <input
@@ -894,15 +912,9 @@ export default function App() {
                       <p className="message">No labels available yet.</p>
                     ) : null}
                   </fieldset>
-                </form>
-
-                {issueError ? <p className="message error">{issueError}</p> : null}
-                {usersError ? <p className="message error">{usersError}</p> : null}
-                {labelsError ? <p className="message error">{labelsError}</p> : null}
-                {issuesLoading ? <p className="message">Loading issues...</p> : null}
-                {usersLoading ? <p className="message">Loading users...</p> : null}
-                {labelsLoading ? <p className="message">Loading labels...</p> : null}
-              </section>
+                  </form>
+                </section>
+              ) : null}
 
               <section className="panel filters-panel">
                 <div className="section-heading filters-heading">
@@ -1005,6 +1017,15 @@ export default function App() {
                 ) : null}
               </section>
 
+              <div className="workspace-messages" aria-live="polite">
+                {issueError ? <p className="message error">{issueError}</p> : null}
+                {usersError ? <p className="message error">{usersError}</p> : null}
+                {labelsError ? <p className="message error">{labelsError}</p> : null}
+                {issuesLoading ? <p className="message">Loading issues...</p> : null}
+                {usersLoading ? <p className="message">Loading users...</p> : null}
+                {labelsLoading ? <p className="message">Loading labels...</p> : null}
+              </div>
+
               <div className="status-stack">
                 {groupedIssues.map((group) => (
                   <section className="panel status-section" key={group.status}>
@@ -1059,8 +1080,8 @@ export default function App() {
                               </div>
 
                               {labels.length > 0 ? (
-                                <div className="issue-label-editor">
-                                  <span>Retag</span>
+                                <details className="issue-label-editor">
+                                  <summary>Retag</summary>
                                   <div className="label-toggle-grid">
                                     {labels.map((label) => {
                                       const isSelected = issue.labels.some(
@@ -1093,7 +1114,7 @@ export default function App() {
                                       );
                                     })}
                                   </div>
-                                </div>
+                                </details>
                               ) : null}
                             </div>
 
@@ -1136,11 +1157,11 @@ export default function App() {
                               </label>
                             </div>
 
-                            <div className="issue-comments">
-                              <div className="issue-comments-header">
+                            <details className="issue-comments">
+                              <summary className="issue-comments-header">
                                 <span>Comments</span>
                                 <strong>{issue.comments.length}</strong>
-                              </div>
+                              </summary>
 
                               {issue.comments.length > 0 ? (
                                 <div className="comment-list">
@@ -1201,7 +1222,7 @@ export default function App() {
                                   </button>
                                 </form>
                               ) : null}
-                            </div>
+                            </details>
                           </article>
                         ))}
                       </div>

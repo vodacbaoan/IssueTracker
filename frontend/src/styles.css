@@ -73,15 +73,15 @@ textarea:focus-visible {
 .page-shell {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 28px 20px 48px;
+  padding: 18px 18px 32px;
   display: grid;
-  gap: 24px;
+  gap: 14px;
 }
 
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 28px;
+  border-radius: 18px;
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(10px);
 }
@@ -89,14 +89,14 @@ textarea:focus-visible {
 .dashboard-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  gap: 24px;
-  padding: 28px;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
 }
 
 .dashboard-copy {
   display: grid;
-  gap: 12px;
+  gap: 6px;
 }
 
 .header-meta {
@@ -110,15 +110,16 @@ textarea:focus-visible {
 .workspace-hero h2,
 .rail-header h2,
 .composer-heading h2,
+.filters-heading h2,
 .panel-heading h3,
 .issue-card h3 {
   margin: 0;
 }
 
 .dashboard-header h1 {
-  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
   line-height: 1;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
 }
 
 .eyebrow {
@@ -142,13 +143,13 @@ textarea:focus-visible {
 
 .intro {
   max-width: 60ch;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .header-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  gap: 8px;
 }
 
 .session-controls {
@@ -158,13 +159,13 @@ textarea:focus-visible {
 }
 
 .stat-chip {
-  min-width: 120px;
-  padding: 16px 18px;
-  border-radius: 20px;
+  min-width: 98px;
+  padding: 10px 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--border);
   display: grid;
-  gap: 6px;
+  gap: 2px;
 }
 
 .stat-chip span,
@@ -178,7 +179,7 @@ textarea:focus-visible {
 
 .stat-chip strong,
 .summary-card strong {
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   letter-spacing: -0.04em;
   color: var(--text);
 }
@@ -224,17 +225,17 @@ textarea:focus-visible {
 
 .workspace-shell {
   display: grid;
-  grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(250px, 290px) minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
 
 .project-rail {
   position: sticky;
-  top: 20px;
-  padding: 20px;
+  top: 14px;
+  padding: 14px;
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .rail-header,
@@ -260,13 +261,13 @@ textarea:focus-visible {
 
 .project-form {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .project-form label,
 .issue-assignment-control {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   color: var(--text);
   font-weight: 600;
 }
@@ -278,8 +279,8 @@ textarea:focus-visible {
 .filter-grid select,
 .issue-assignment-control select {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 16px;
+  padding: 9px 10px;
+  border-radius: 10px;
   border: 1px solid var(--border-strong);
   background: var(--surface-strong);
   color: var(--text);
@@ -288,7 +289,7 @@ textarea:focus-visible {
 
 .project-form textarea {
   resize: none;
-  min-height: 110px;
+  min-height: 86px;
 }
 
 .project-form button,
@@ -305,15 +306,15 @@ textarea:focus-visible {
     box-shadow 0.15s ease;
 }
 
-.project-form button,
+.project-form > button,
 .secondary-button,
 .toggle-button {
   border: none;
   border-radius: 999px;
-  padding: 12px 18px;
+  padding: 9px 14px;
 }
 
-.project-form button {
+.project-form > button {
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
   color: white;
   font-weight: 700;
@@ -340,7 +341,7 @@ textarea:focus-visible {
   color: white;
 }
 
-.project-form button:hover,
+.project-form > button:hover,
 .secondary-button:hover,
 .toggle-button:hover,
 .status-button:hover,
@@ -348,7 +349,7 @@ textarea:focus-visible {
   transform: translateY(-1px);
 }
 
-.project-form button:disabled,
+.project-form > button:disabled,
 .status-button:disabled,
 .label-toggle:disabled,
 .issue-assignment-control select:disabled {
@@ -363,10 +364,10 @@ textarea:focus-visible {
 }
 
 .create-project-panel {
-  padding: 18px;
-  border-radius: 22px;
+  padding: 14px;
+  border-radius: 14px;
   display: grid;
-  gap: 16px;
+  gap: 12px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
@@ -390,15 +391,25 @@ textarea:focus-visible {
   gap: 12px;
 }
 
+.status-stack {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.status-section {
+  min-width: 0;
+}
+
 .project-tile {
   width: 100%;
   text-align: left;
-  padding: 16px;
+  padding: 12px;
   border: 1px solid transparent;
-  border-radius: 20px;
+  border-radius: 14px;
   background: transparent;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .project-tile-selected {
@@ -440,49 +451,65 @@ textarea:focus-visible {
 
 .project-tile-copy {
   font-size: 0.92rem;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .workspace-main {
   min-width: 0;
-  gap: 20px;
+  gap: 12px;
 }
 
 .workspace-empty {
-  min-height: 300px;
-  padding: 36px;
+  min-height: 180px;
+  padding: 24px;
   display: grid;
   gap: 12px;
-  align-content: center;
+  align-content: start;
 }
 
 .workspace-hero,
 .composer-panel,
 .status-section,
 .filters-panel {
-  padding: 24px;
+  padding: 16px;
 }
 
 .workspace-hero {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .workspace-hero h2 {
-  font-size: clamp(1.7rem, 3vw, 2.4rem);
-  letter-spacing: -0.04em;
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  letter-spacing: -0.03em;
 }
 
 .workspace-description {
-  margin-top: 10px;
+  margin-top: 4px;
   max-width: 56ch;
 }
 
+.workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .workspace-date {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 999px;
   background: var(--brand-soft);
   color: var(--brand-strong);
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.workspace-issue-toggle {
+  width: auto;
   white-space: nowrap;
 }
 
@@ -492,19 +519,18 @@ textarea:focus-visible {
 }
 
 .summary-card {
-  padding: 18px;
-  border-radius: 20px;
+  padding: 10px 12px;
+  border-radius: 12px;
   display: grid;
-  gap: 8px;
+  gap: 3px;
   align-content: start;
-  min-height: 96px;
 }
 
 .composer-panel,
 .status-section,
 .filters-panel {
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .composer-heading {
@@ -513,13 +539,13 @@ textarea:focus-visible {
 }
 
 .issue-form-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  gap: 14px;
+  grid-template-columns: minmax(240px, 2fr) minmax(130px, 0.8fr) minmax(160px, 1fr) auto;
+  gap: 10px;
   align-items: end;
 }
 
 .issue-title-field {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .issue-description-field {
@@ -534,15 +560,27 @@ textarea:focus-visible {
   min-width: 160px;
 }
 
+.filters-heading h2 {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1fr) auto;
-  gap: 14px;
+  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(116px, 1fr)) auto;
+  gap: 10px;
   align-items: end;
 }
 
 .filter-search-field {
-  grid-column: span 2;
+  grid-column: auto;
+}
+
+.filter-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 600;
 }
 
 .filter-summary {
@@ -584,7 +622,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 6px 9px;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -618,19 +656,24 @@ textarea:focus-visible {
   color: var(--text);
 }
 
+.workspace-messages {
+  display: grid;
+  gap: 6px;
+}
+
 .issue-card {
-  padding: 18px;
-  border-radius: 22px;
+  padding: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 250, 254, 0.96) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .issue-card-copy h3 {
-  margin: 0 0 6px;
-  font-size: 1.08rem;
+  margin: 0 0 4px;
+  font-size: 0.98rem;
   letter-spacing: -0.02em;
 }
 
@@ -642,8 +685,12 @@ textarea:focus-visible {
 .issue-description {
   margin: 0;
   color: var(--text-soft);
-  line-height: 1.65;
+  line-height: 1.45;
   white-space: pre-wrap;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .issue-badges,
@@ -659,14 +706,13 @@ textarea:focus-visible {
 
 .issue-label-block {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   padding-top: 6px;
   border-top: 1px solid rgba(16, 35, 63, 0.06);
 }
 
-.issue-comments {
-  display: grid;
-  gap: 14px;
+.issue-comments,
+.issue-label-editor {
   padding-top: 6px;
   border-top: 1px solid rgba(16, 35, 63, 0.06);
 }
@@ -688,6 +734,32 @@ textarea:focus-visible {
 
 .issue-comments-header strong {
   color: var(--text);
+}
+
+.issue-comments-header,
+.issue-label-editor summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.issue-comments-header::-webkit-details-marker,
+.issue-label-editor summary::-webkit-details-marker {
+  display: none;
+}
+
+.issue-label-editor summary {
+  color: var(--text-faint);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.issue-label-editor .label-toggle-grid,
+.issue-comments > .comment-list,
+.issue-comments > .comment-form,
+.issue-comments > .message {
+  margin-top: 10px;
 }
 
 .comment-list,
@@ -811,7 +883,8 @@ textarea:focus-visible {
   border-radius: 999px;
   background: var(--surface-strong);
   color: var(--text);
-  padding: 10px 14px;
+  padding: 7px 9px;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
@@ -852,12 +925,17 @@ textarea:focus-visible {
   .project-rail {
     position: static;
   }
+
+  .project-entries {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
 }
 
 @media (max-width: 860px) {
   .issue-form-grid,
   .summary-grid,
-  .filter-grid {
+  .filter-grid,
+  .status-stack {
     grid-template-columns: 1fr;
   }
 
@@ -879,7 +957,7 @@ textarea:focus-visible {
 
 @media (max-width: 720px) {
   .page-shell {
-    padding: 20px 16px 36px;
+    padding: 14px 12px 28px;
   }
 
   .dashboard-header,
@@ -889,7 +967,7 @@ textarea:focus-visible {
   .filters-panel,
   .workspace-empty,
   .project-rail {
-    padding: 20px;
+    padding: 14px;
   }
 
   .rail-header,
@@ -902,6 +980,11 @@ textarea:focus-visible {
 
   .header-stats {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-actions,
+  .workspace-issue-toggle {
+    width: 100%;
   }
 
   .auth-panel {
