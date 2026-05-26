@@ -20,25 +20,27 @@ A beginner-friendly full-stack starter that keeps the backend layered and uses E
 
 ```text
 .
+|-- backend
+|   |-- prisma
+|   `-- src
+|       |-- config
+|       |-- db
+|       |-- lib
+|       |-- modules
+|       |   |-- auth
+|       |   |-- health
+|       |   |-- issues
+|       |   |-- labels
+|       |   |-- projects
+|       |   `-- users
+|       |-- plugins
+|       |-- app.ts
+|       `-- server.ts
 |-- frontend
 |   |-- src
 |   |   |-- api
 |   |   `-- app
-|-- prisma
-`-- src
-    |-- config
-    |-- db
-    |-- lib
-    |-- modules
-    |   |-- auth
-    |   |-- health
-    |   |-- issues
-    |   |-- labels
-    |   |-- projects
-    |   `-- users
-    |-- plugins
-    |-- app.ts
-    `-- server.ts
+`-- docker-compose.yml
 ```
 
 ## Backend Request Flow
@@ -152,9 +154,9 @@ Requests move through the backend in this order:
 
 ## Environment Variables
 
-### Backend `.env`
+### Backend `backend/.env`
 
-Use `.env.example` and set:
+Use `backend/.env.example` and set:
 
 - `NODE_ENV`
 - `HOST`
@@ -183,25 +185,25 @@ docker compose up -d postgres
 ### 2. Install backend dependencies
 
 ```bash
-npm install
+npm --prefix backend install
 ```
 
 ### 3. Generate Prisma client
 
 ```bash
-npm run prisma:generate
+npm --prefix backend run prisma:generate
 ```
 
 ### 4. Run migrations
 
 ```bash
-npm run prisma:migrate
+npm --prefix backend run prisma:migrate
 ```
 
 ### 5. Seed sample users, labels, projects, and issue comments
 
 ```bash
-npm run prisma:seed
+npm --prefix backend run prisma:seed
 ```
 
 Seeded demo users all use the password `Password123!`.
@@ -209,7 +211,7 @@ Seeded demo users all use the password `Password123!`.
 ### 6. Start the backend
 
 ```bash
-npm run dev
+npm --prefix backend run dev
 ```
 
 The backend runs on `http://localhost:3000`.
@@ -217,13 +219,13 @@ The backend runs on `http://localhost:3000`.
 ### 7. Install frontend dependencies
 
 ```bash
-npm run frontend:install
+npm --prefix frontend install
 ```
 
 ### 8. Start the frontend
 
 ```bash
-npm run frontend:dev
+npm --prefix frontend run dev
 ```
 
 The frontend runs on `http://localhost:5173`.
@@ -249,15 +251,15 @@ The dashboard lets you:
 ### Backend
 
 ```bash
-npm run build
-npm run start
+npm --prefix backend run build
+npm --prefix backend run start
 ```
 
 ### Frontend
 
 ```bash
-npm run frontend:build
-npm run frontend:start
+npm --prefix frontend run build
+npm --prefix frontend run start
 ```
 
 ## What This Starter Teaches

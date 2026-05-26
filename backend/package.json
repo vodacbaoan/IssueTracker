@@ -1,6 +1,6 @@
 {
   "private": true,
-  "description": "Beginner-friendly full-stack starter with Express, Prisma, PostgreSQL, and Next.js.",
+  "description": "Express API for the issue tracker full-stack starter.",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -13,10 +13,6 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "frontend:install": "cd frontend && npm install",
-    "frontend:dev": "npm --prefix frontend run dev",
-    "frontend:build": "npm --prefix frontend run build",
-    "frontend:start": "npm --prefix frontend run start",
     "postinstall": "prisma generate"
   },
   "dependencies": {
