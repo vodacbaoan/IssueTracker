@@ -176,10 +176,33 @@ Use `frontend/.env.example` and set:
 
 ## Local Development
 
+### Docker Compose
+
+Start PostgreSQL, the backend, and the frontend together:
+
+```bash
+docker-compose up --build
+```
+
+The backend runs migrations before starting. The app will be available at:
+
+- Backend: `http://localhost:3000`
+- Frontend: `http://localhost:5173`
+
+To seed sample users, labels, projects, and issue comments:
+
+```bash
+docker-compose run --rm backend npm run prisma:seed
+```
+
+Seeded demo users all use the password `Password123!`.
+
+### Manual Setup
+
 ### 1. Start PostgreSQL
 
 ```bash
-docker compose up -d postgres
+docker-compose up -d postgres
 ```
 
 ### 2. Install backend dependencies
