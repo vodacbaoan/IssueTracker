@@ -10,6 +10,7 @@ import { createIssueRouter } from './modules/issues/issue.route';
 import { createLabelRouter } from './modules/labels/label.route';
 import { createProjectRouter } from './modules/projects/project.route';
 import { createUserRouter } from './modules/users/user.route';
+import { createWorkspaceRouter } from './modules/workspaces/workspace.route';
 import errorHandler, { notFoundHandler } from './plugins/error-handler';
 
 export interface BuildAppOptions {
@@ -42,6 +43,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   app.use('/api/v1/auth', createAuthRouter(prisma, config));
   app.use('/api/v1/labels', createLabelRouter(prisma));
   app.use('/api/v1/users', createUserRouter(prisma));
+  app.use('/api/v1/workspaces', createWorkspaceRouter(prisma, requireAuth));
   app.use('/api/v1/projects/:projectId/issues', createIssueRouter(prisma, requireAuth));
   app.use('/api/v1/projects', createProjectRouter(prisma, requireAuth));
 

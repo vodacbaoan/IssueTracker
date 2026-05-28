@@ -1,10 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
 import { UnauthorizedError } from '../../lib/errors';
-import type { ProjectService } from './project.service';
-import type { CreateProjectBody } from './project.schema';
+import type { CreateWorkspaceBody } from './workspace.schema';
+import type { WorkspaceService } from './workspace.service';
 
-export class ProjectController {
-  constructor(private readonly projectService: ProjectService) {}
+export class WorkspaceController {
+  constructor(private readonly workspaceService: WorkspaceService) {}
 
   list = async (
     request: Request,
@@ -18,15 +18,15 @@ export class ProjectController {
         throw new UnauthorizedError('Authentication required');
       }
 
-      const projects = await this.projectService.listProjects(userId);
-      response.json(projects);
+      const workspaces = await this.workspaceService.listWorkspaces(userId);
+      response.json(workspaces);
     } catch (error) {
       next(error);
     }
   };
 
   create = async (
-    request: Request<unknown, unknown, CreateProjectBody>,
+    request: Request<unknown, unknown, CreateWorkspaceBody>,
     response: Response,
     next: NextFunction,
   ): Promise<void> => {
@@ -37,8 +37,8 @@ export class ProjectController {
         throw new UnauthorizedError('Authentication required');
       }
 
-      const project = await this.projectService.createProject(userId, request.body);
-      response.status(201).json(project);
+      const workspace = await this.workspaceService.createWorkspace(userId, request.body);
+      response.status(201).json(workspace);
     } catch (error) {
       next(error);
     }

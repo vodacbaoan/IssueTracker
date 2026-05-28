@@ -25,13 +25,29 @@ export class AuthRepository {
   }
 
   createUser(input: SignupBody & { passwordHash: string }): Promise<PublicUser> {
-    return this.prisma.user.create({
-      data: {
-        name: input.name,
-        email: input.email,
-        passwordHash: input.passwordHash,
-      },
-      select: publicUserSelect,
+    return this.prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.create({
+        data: {
+          name: input.name,
+          email: input.email,
+          passwordHash: input.passwordHash,
+        },
+        select: publicUserSelect,
+      });
+
+      await transaction.workspace.create({
+        data: {
+          name: `${user.name}'s Workspace`,
+          memberships: {
+            create: {
+              userId: user.id,
+              role: 'owner',
+            },
+          },
+        },
+      });
+
+      return user;
     });
   }
 

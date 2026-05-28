@@ -29,7 +29,7 @@ export function createProjectRouter(prisma: PrismaClient, requireAuth: RequestHa
     next();
   };
 
-  router.get('/', projectController.list);
+  router.get('/', requireAuth, projectController.list);
   router.post('/', requireAuth, validateCreateProject, projectController.create);
 
   return router;

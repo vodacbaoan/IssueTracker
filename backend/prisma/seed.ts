@@ -178,6 +178,8 @@ const seedProjects: SeedProject[] = [
 
 async function main(): Promise<void> {
   await prisma.project.deleteMany();
+  await prisma.membership.deleteMany();
+  await prisma.workspace.deleteMany();
   await prisma.label.deleteMany();
   await prisma.user.deleteMany();
 
@@ -196,6 +198,18 @@ async function main(): Promise<void> {
     userIdsByEmail.set(createdUser.email, createdUser.id);
   }
 
+  const workspace = await prisma.workspace.create({
+    data: {
+      name: 'Default Workspace',
+      memberships: {
+        create: seedUsers.map((user) => ({
+          userId: userIdsByEmail.get(user.email) as string,
+          role: user.email === 'mia.chen@example.com' ? 'owner' : 'member',
+        })),
+      },
+    },
+  });
+
   for (const label of seedLabels) {
     const createdLabel = await prisma.label.create({
       data: label,
@@ -210,6 +224,7 @@ async function main(): Promise<void> {
     await prisma.project.create({
       data: {
         ...projectData,
+        workspaceId: workspace.id,
         issues: {
           create: issues.map((issue) => ({
             title: issue.title,

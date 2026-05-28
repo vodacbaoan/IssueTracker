@@ -18,12 +18,45 @@ enum IssuePriority {
   high
 }
 
+enum WorkspaceRole {
+  owner
+  admin
+  member
+  viewer
+}
+
+model Workspace {
+  id          String       @id @default(uuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  projects    Project[]
+}
+
+model Membership {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(member)
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
 model Project {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   description String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   issues      Issue[]
+
+  @@index([workspaceId])
 }
 
 model User {
@@ -32,6 +65,7 @@ model User {
   email          String   @unique
   passwordHash   String?
   createdAt      DateTime @default(now())
+  memberships    Membership[]
   assignedIssues Issue[]
   comments       Comment[]
   refreshSessions RefreshSession[]
