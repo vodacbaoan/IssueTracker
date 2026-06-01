@@ -31,13 +31,14 @@ export class ProjectController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const { workspaceId } = request.params as { workspaceId: string };
       const userId = request.auth?.userId;
 
       if (!userId) {
         throw new UnauthorizedError('Authentication required');
       }
 
-      const project = await this.projectService.createProject(userId, request.body);
+      const project = await this.projectService.createProject(userId, workspaceId, request.body);
       response.status(201).json(project);
     } catch (error) {
       next(error);

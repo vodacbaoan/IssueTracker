@@ -1,31 +1,66 @@
-import type { PrismaClient, Project } from '@prisma/client';
+import type { PrismaClient, Project, WorkspaceRole } from '@prisma/client';
 import type { CreateProjectBody } from './project.schema';
+
+export interface WorkspaceProjectsRecord {
+  id: string;
+  name: string;
+  createdAt: Date;
+  role: WorkspaceRole;
+  projects: Project[];
+}
 
 export class ProjectRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  listByUser(userId: string): Promise<Project[]> {
-    return this.prisma.project.findMany({
-      where: {
-        workspace: {
-          memberships: {
-            some: { userId },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  findFirstWorkspaceForUser(userId: string): Promise<{ id: string } | null> {
-    return this.prisma.workspace.findFirst({
+  async listByUser(userId: string): Promise<WorkspaceProjectsRecord[]> {
+    const workspaces = await this.prisma.workspace.findMany({
       where: {
         memberships: {
           some: { userId },
         },
+        projects: {
+          some: {},
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        memberships: {
+          where: { userId },
+          select: { role: true },
+        },
+        projects: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
       orderBy: { createdAt: 'asc' },
-      select: { id: true },
+    });
+
+    return workspaces.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      createdAt: workspace.createdAt,
+      role: workspace.memberships[0]?.role ?? 'viewer',
+      projects: workspace.projects,
+    }));
+  }
+
+  findWorkspaceMembership(
+    workspaceId: string,
+    userId: string,
+  ): Promise<{ id: string; role: WorkspaceRole } | null> {
+    return this.prisma.membership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId,
+        },
+      },
+      select: {
+        id: true,
+        role: true,
+      },
     });
   }
 
