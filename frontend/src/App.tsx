@@ -21,8 +21,17 @@ import {
   updateIssueLabels,
   updateIssueStatus,
 } from './api/issues';
-import { createProject, getProjects, type Project } from './api/projects';
+import {
+  createProject,
+  getProjectGroups,
+  type WorkspaceProjectGroup,
+} from './api/projects';
 import { getUsers, type User } from './api/users';
+import {
+  getWorkspaces,
+  type Workspace,
+  type WorkspaceRole,
+} from './api/workspaces';
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
@@ -58,6 +67,21 @@ function formatIssuePriority(priority: IssuePriority): string {
   }
 }
 
+function formatWorkspaceRole(role: WorkspaceRole): string {
+  switch (role) {
+    case 'owner':
+      return 'Owner';
+    case 'admin':
+      return 'Admin';
+    case 'member':
+      return 'Member';
+    case 'viewer':
+      return 'Viewer';
+    default:
+      return role;
+  }
+}
+
 function toggleIdInList(currentIds: string[], id: string): string[] {
   return currentIds.includes(id)
     ? currentIds.filter((currentId) => currentId !== id)
@@ -66,6 +90,20 @@ function toggleIdInList(currentIds: string[], id: string): string[] {
 
 function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error ? error.message : fallbackMessage;
+}
+
+function mergeWorkspaceProjectGroups(
+  workspaces: Workspace[],
+  projectGroups: WorkspaceProjectGroup[],
+): WorkspaceProjectGroup[] {
+  const projectGroupsByWorkspaceId = new Map(
+    projectGroups.map((projectGroup) => [projectGroup.id, projectGroup]),
+  );
+
+  return workspaces.map((workspace) => ({
+    ...workspace,
+    projects: projectGroupsByWorkspaceId.get(workspace.id)?.projects ?? [],
+  }));
 }
 
 const ISSUE_PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
@@ -86,11 +124,13 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [projectGroups, setProjectGroups] = useState<WorkspaceProjectGroup[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [issueTitle, setIssueTitle] = useState('');
@@ -126,10 +166,17 @@ export default function App() {
     setProjectError(null);
 
     try {
-      const nextProjects = await getProjects();
-      setProjects(nextProjects);
+      const [nextWorkspaces, nextProjectGroups] = await Promise.all([
+        getWorkspaces(),
+        getProjectGroups(),
+      ]);
+
+      setWorkspaces(nextWorkspaces);
+      setProjectGroups(mergeWorkspaceProjectGroups(nextWorkspaces, nextProjectGroups));
     } catch (loadError) {
-      setProjectError(loadError instanceof Error ? loadError.message : 'Failed to load projects');
+      setProjectError(
+        loadError instanceof Error ? loadError.message : 'Failed to load workspaces',
+      );
     } finally {
       setLoading(false);
     }
@@ -213,10 +260,12 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) {
-      setProjects([]);
+      setWorkspaces([]);
+      setProjectGroups([]);
       setUsers([]);
       setLabels([]);
       setIssues([]);
+      setSelectedWorkspaceId(null);
       setSelectedProjectId(null);
       setCommentBodiesByIssueId({});
       setLoading(false);
@@ -237,24 +286,52 @@ export default function App() {
       return;
     }
 
-    if (!loading && projects.length === 0) {
-      setIsProjectFormOpen(true);
+    const currentWorkspace = selectedWorkspaceId
+      ? projectGroups.find((projectGroup) => projectGroup.id === selectedWorkspaceId) ?? null
+      : null;
+
+    if (!currentWorkspace || currentWorkspace.role === 'viewer') {
+      setIsProjectFormOpen(false);
     }
-  }, [authUser, loading, projects.length]);
+  }, [authUser, projectGroups, selectedWorkspaceId]);
 
   useEffect(() => {
-    setSelectedProjectId((currentProjectId) => {
-      if (projects.length === 0) {
+    setSelectedWorkspaceId((currentWorkspaceId) => {
+      if (workspaces.length === 0) {
         return null;
       }
 
-      if (currentProjectId && projects.some((project) => project.id === currentProjectId)) {
+      if (
+        currentWorkspaceId &&
+        workspaces.some((workspace) => workspace.id === currentWorkspaceId)
+      ) {
+        return currentWorkspaceId;
+      }
+
+      return workspaces[0]?.id ?? null;
+    });
+  }, [workspaces]);
+
+  useEffect(() => {
+    setSelectedProjectId((currentProjectId) => {
+      const currentWorkspace = selectedWorkspaceId
+        ? projectGroups.find((projectGroup) => projectGroup.id === selectedWorkspaceId)
+        : null;
+
+      if (!currentWorkspace || currentWorkspace.projects.length === 0) {
+        return null;
+      }
+
+      if (
+        currentProjectId &&
+        currentWorkspace.projects.some((project) => project.id === currentProjectId)
+      ) {
         return currentProjectId;
       }
 
       return null;
     });
-  }, [projects]);
+  }, [projectGroups, selectedWorkspaceId]);
 
   useEffect(() => {
     setIsIssueFormOpen(false);
@@ -318,6 +395,7 @@ export default function App() {
     try {
       await logout();
       setAuthUser(null);
+      setSelectedWorkspaceId(null);
       setSelectedProjectId(null);
       setCommentBodiesByIssueId({});
     } catch (logoutError) {
@@ -329,17 +407,36 @@ export default function App() {
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+
+    const currentWorkspace = selectedWorkspaceId
+      ? projectGroups.find((projectGroup) => projectGroup.id === selectedWorkspaceId) ?? null
+      : null;
+
+    if (!currentWorkspace) {
+      setProjectError('Select a workspace before creating a project.');
+      return;
+    }
+
+    if (currentWorkspace.role === 'viewer') {
+      setProjectError('Viewer access cannot create projects.');
+      return;
+    }
+
     setSubmitting(true);
     setProjectError(null);
 
     try {
-      const project = await createProject({
-        name,
-        description: description || undefined,
-      });
+      const project = await createProject(
+        currentWorkspace.id,
+        {
+          name,
+          description: description || undefined,
+        },
+      );
       setName('');
       setDescription('');
       setIsProjectFormOpen(false);
+      setSelectedWorkspaceId(project.workspaceId);
       setSelectedProjectId(project.id);
       await loadProjects();
     } catch (submitError) {
@@ -486,7 +583,16 @@ export default function App() {
     setLabelFilterId('all');
   };
 
+  const selectedWorkspace = selectedWorkspaceId
+    ? projectGroups.find((projectGroup) => projectGroup.id === selectedWorkspaceId) ?? null
+    : null;
+  const projects = selectedWorkspace?.projects ?? [];
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
+  const projectCount = projectGroups.reduce(
+    (count, projectGroup) => count + projectGroup.projects.length,
+    0,
+  );
+  const canCreateProjects = Boolean(selectedWorkspace && selectedWorkspace.role !== 'viewer');
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
@@ -638,7 +744,7 @@ export default function App() {
           <div className="header-stats">
             <article className="stat-chip">
               <span>Projects</span>
-              <strong>{loading ? '...' : projects.length}</strong>
+              <strong>{loading ? '...' : projectCount}</strong>
             </article>
             <article className="stat-chip">
               <span>People</span>
@@ -679,10 +785,42 @@ export default function App() {
             </button>
           </div>
 
+          <label className="workspace-selector">
+            <span>Workspace</span>
+            <select
+              value={selectedWorkspaceId ?? ''}
+              disabled={loading || workspaces.length === 0}
+              onChange={(event) => {
+                setSelectedWorkspaceId(event.target.value || null);
+                setSelectedProjectId(null);
+              }}
+            >
+              {workspaces.length === 0 ? (
+                <option value="">No workspaces</option>
+              ) : (
+                workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+
+          {selectedWorkspace ? (
+            <div className="workspace-rail-meta">
+              <span className="workspace-role-chip">
+                {formatWorkspaceRole(selectedWorkspace.role)}
+              </span>
+              <span>{projects.length} projects</span>
+            </div>
+          ) : null}
+
           <button
             aria-controls="new-project-panel"
             aria-expanded={isProjectFormOpen}
             className={`toggle-button ${isProjectFormOpen ? 'toggle-button-active' : ''}`}
+            disabled={!canCreateProjects}
             onClick={() => setIsProjectFormOpen((currentState) => !currentState)}
             type="button"
           >
@@ -693,7 +831,7 @@ export default function App() {
             <section className="create-project-panel" id="new-project-panel">
               <div className="panel-heading">
                 <h3>Start a project</h3>
-                <p>Create a new track for incoming work and open it in the workspace immediately.</p>
+                <p>Create a new track for incoming work and open it in this workspace immediately.</p>
               </div>
 
               <form className="project-form compact-form" onSubmit={(event) => void handleSubmit(event)}>
@@ -720,7 +858,7 @@ export default function App() {
                   />
                 </label>
 
-                <button type="submit" disabled={submitting}>
+                <button type="submit" disabled={submitting || !canCreateProjects}>
                   {submitting ? 'Saving...' : 'Create project'}
                 </button>
               </form>
@@ -730,9 +868,15 @@ export default function App() {
           {projectError ? <p className="message error">{projectError}</p> : null}
           {loading ? <p className="message">Loading projects...</p> : null}
 
-          {!loading && projects.length === 0 ? (
+          {!loading && !selectedWorkspace ? (
             <p className="message rail-empty">
-              No projects yet. Open the panel above to create the first one.
+              No workspace available yet.
+            </p>
+          ) : null}
+
+          {!loading && selectedWorkspace && projects.length === 0 ? (
+            <p className="message rail-empty">
+              No projects in this workspace yet.
             </p>
           ) : null}
 

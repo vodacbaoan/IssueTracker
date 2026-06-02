@@ -265,6 +265,7 @@ textarea:focus-visible {
 }
 
 .project-form label,
+.workspace-selector,
 .issue-assignment-control {
   display: grid;
   gap: 6px;
@@ -275,6 +276,7 @@ textarea:focus-visible {
 .project-form input,
 .project-form select,
 .project-form textarea,
+.workspace-selector select,
 .filter-grid input,
 .filter-grid select,
 .issue-assignment-control select {
@@ -350,11 +352,33 @@ textarea:focus-visible {
 }
 
 .project-form > button:disabled,
+.toggle-button:disabled,
 .status-button:disabled,
 .label-toggle:disabled,
+.workspace-selector select:disabled,
 .issue-assignment-control select:disabled {
   cursor: not-allowed;
   opacity: 0.68;
+}
+
+.workspace-rail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.workspace-role-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .create-project-panel,
