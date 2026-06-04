@@ -108,7 +108,7 @@ export function createIssueRouter(prisma: PrismaClient, requireAuth: RequestHand
     next();
   };
 
-  router.get('/', issueController.list);
+  router.get('/', requireAuth, issueController.list);
   router.post('/', requireAuth, validateCreateIssue, issueController.create);
   router.post('/:issueId/comments', requireAuth, validateCreateComment, issueController.createComment);
   router.patch('/:issueId/status', requireAuth, validateUpdateStatus, issueController.updateStatus);

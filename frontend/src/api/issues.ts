@@ -42,7 +42,11 @@ export interface CreateIssueCommentInput {
 }
 
 export async function getIssues(projectId: string): Promise<Issue[]> {
-  const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/issues`);
+  const response = await apiFetch(
+    `/projects/${encodeURIComponent(projectId)}/issues`,
+    {},
+    { retryOnUnauthorized: true },
+  );
   return readJson<Issue[]>(response);
 }
 

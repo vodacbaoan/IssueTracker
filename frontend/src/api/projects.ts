@@ -23,7 +23,7 @@ export interface CreateProjectInput {
 }
 
 export async function getProjectGroups(): Promise<WorkspaceProjectGroup[]> {
-  const response = await apiFetch('/projects');
+  const response = await apiFetch('/projects', {}, { retryOnUnauthorized: true });
   return readJson<WorkspaceProjectGroup[]>(response);
 }
 

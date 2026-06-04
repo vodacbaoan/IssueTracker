@@ -10,6 +10,6 @@ export interface Workspace {
 }
 
 export async function getWorkspaces(): Promise<Workspace[]> {
-  const response = await apiFetch('/workspaces');
+  const response = await apiFetch('/workspaces', {}, { retryOnUnauthorized: true });
   return readJson<Workspace[]>(response);
 }

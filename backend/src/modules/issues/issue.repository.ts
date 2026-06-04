@@ -2,8 +2,8 @@ import type {
   IssueStatus,
   Prisma,
   PrismaClient,
-  Project,
   Label,
+  WorkspaceRole,
 } from '@prisma/client';
 import type { CreateCommentBody, CreateIssueBody } from './issue.schema';
 import { publicUserSelect } from '../users/user.types';
@@ -24,19 +24,33 @@ const issueInclude = {
 
 export type IssueRecord = Prisma.IssueGetPayload<{ include: typeof issueInclude }>;
 
+export interface ProjectMembershipRecord {
+  id: string;
+  role: WorkspaceRole;
+}
+
 export class IssueRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  findProject(projectId: string): Promise<Project | null> {
-    return this.prisma.project.findUnique({
-      where: { id: projectId },
-    });
-  }
-
-  findUser(userId: string): Promise<{ id: string } | null> {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
+  findProjectMembership(
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectMembershipRecord | null> {
+    return this.prisma.membership.findFirst({
+      where: {
+        userId,
+        workspace: {
+          projects: {
+            some: {
+              id: projectId,
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        role: true,
+      },
     });
   }
 

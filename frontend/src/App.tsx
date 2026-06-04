@@ -405,12 +405,24 @@ export default function App() {
     }
   };
 
+  const getCurrentWorkspace = (): WorkspaceProjectGroup | null =>
+    selectedWorkspaceId
+      ? projectGroups.find((projectGroup) => projectGroup.id === selectedWorkspaceId) ?? null
+      : null;
+
+  const canEditCurrentWorkspaceIssues = (): boolean => {
+    const currentWorkspace = getCurrentWorkspace();
+    return Boolean(currentWorkspace && currentWorkspace.role !== 'viewer');
+  };
+
+  const showIssuePermissionError = (): void => {
+    setIssueError('Viewer access cannot modify issues.');
+  };
+
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
-    const currentWorkspace = selectedWorkspaceId
-      ? projectGroups.find((projectGroup) => projectGroup.id === selectedWorkspaceId) ?? null
-      : null;
+    const currentWorkspace = getCurrentWorkspace();
 
     if (!currentWorkspace) {
       setProjectError('Select a workspace before creating a project.');
@@ -453,6 +465,11 @@ export default function App() {
       return;
     }
 
+    if (!canEditCurrentWorkspaceIssues()) {
+      showIssuePermissionError();
+      return;
+    }
+
     setIssueSubmitting(true);
     setIssueError(null);
 
@@ -483,6 +500,11 @@ export default function App() {
       return;
     }
 
+    if (!canEditCurrentWorkspaceIssues()) {
+      showIssuePermissionError();
+      return;
+    }
+
     setStatusUpdatingIssueId(issueId);
     setIssueError(null);
 
@@ -501,6 +523,11 @@ export default function App() {
     assigneeId: string | null,
   ): Promise<void> => {
     if (!selectedProjectId) {
+      return;
+    }
+
+    if (!canEditCurrentWorkspaceIssues()) {
+      showIssuePermissionError();
       return;
     }
 
@@ -525,6 +552,11 @@ export default function App() {
       return;
     }
 
+    if (!canEditCurrentWorkspaceIssues()) {
+      showIssuePermissionError();
+      return;
+    }
+
     setLabelUpdatingIssueId(issueId);
     setIssueError(null);
 
@@ -540,6 +572,11 @@ export default function App() {
 
   const handleIssueCommentSubmit = async (issueId: string): Promise<void> => {
     if (!selectedProjectId || !authUser) {
+      return;
+    }
+
+    if (!canEditCurrentWorkspaceIssues()) {
+      showIssuePermissionError();
       return;
     }
 
@@ -593,6 +630,7 @@ export default function App() {
     0,
   );
   const canCreateProjects = Boolean(selectedWorkspace && selectedWorkspace.role !== 'viewer');
+  const canEditIssues = Boolean(selectedWorkspace && selectedWorkspace.role !== 'viewer');
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
@@ -939,6 +977,7 @@ export default function App() {
                       className={`toggle-button workspace-issue-toggle ${
                         isIssueFormOpen ? 'toggle-button-active' : ''
                       }`}
+                      disabled={!canEditIssues}
                       onClick={() => setIsIssueFormOpen((currentState) => !currentState)}
                       type="button"
                     >
@@ -963,7 +1002,7 @@ export default function App() {
                 </div>
               </section>
 
-              {isIssueFormOpen ? (
+              {isIssueFormOpen && canEditIssues ? (
                 <section className="panel composer-panel" id="new-issue-panel">
                   <div className="section-heading composer-heading">
                     <div>
@@ -1025,7 +1064,11 @@ export default function App() {
                     </select>
                   </label>
 
-                  <button className="issue-submit-button" type="submit" disabled={issueSubmitting}>
+                  <button
+                    className="issue-submit-button"
+                    type="submit"
+                    disabled={issueSubmitting || !canEditIssues}
+                  >
                     {issueSubmitting ? 'Saving...' : 'Create issue'}
                   </button>
 
@@ -1039,7 +1082,7 @@ export default function App() {
                           <button
                             aria-pressed={isSelected}
                             className={`label-toggle ${isSelected ? 'label-toggle-active' : ''}`}
-                            disabled={labelsLoading}
+                            disabled={labelsLoading || !canEditIssues}
                             key={label.id}
                             onClick={() =>
                               setIssueLabelIds((currentIds) => toggleIdInList(currentIds, label.id))
@@ -1239,7 +1282,9 @@ export default function App() {
                                             isSelected ? 'label-toggle-active' : ''
                                           }`}
                                           disabled={
-                                            labelsLoading || labelUpdatingIssueId === issue.id
+                                            labelsLoading ||
+                                            labelUpdatingIssueId === issue.id ||
+                                            !canEditIssues
                                           }
                                           key={label.id}
                                           onClick={() =>
@@ -1269,7 +1314,9 @@ export default function App() {
                                     issue.status === status ? 'status-button-active' : ''
                                   }`}
                                   disabled={
-                                    statusUpdatingIssueId === issue.id || issue.status === status
+                                    statusUpdatingIssueId === issue.id ||
+                                    issue.status === status ||
+                                    !canEditIssues
                                   }
                                   key={status}
                                   onClick={() => void handleIssueStatusChange(issue.id, status)}
@@ -1286,7 +1333,11 @@ export default function App() {
                                 <span>Reassign</span>
                                 <select
                                   value={issue.assigneeId ?? ''}
-                                  disabled={assigneeUpdatingIssueId === issue.id || usersLoading}
+                                  disabled={
+                                    assigneeUpdatingIssueId === issue.id ||
+                                    usersLoading ||
+                                    !canEditIssues
+                                  }
                                   onChange={(event) =>
                                     void handleIssueAssigneeChange(issue.id, event.target.value || null)
                                   }
@@ -1323,7 +1374,7 @@ export default function App() {
                                 <p className="message">No comments yet.</p>
                               )}
 
-                              {authUser ? (
+                              {authUser && canEditIssues ? (
                                 <form
                                   className="comment-form"
                                   onSubmit={(event) => {

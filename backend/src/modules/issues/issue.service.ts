@@ -1,14 +1,22 @@
-import { NotFoundError } from '../../lib/errors';
+import type { IssueStatus, WorkspaceRole } from '@prisma/client';
+import { ForbiddenError, NotFoundError } from '../../lib/errors';
 import type {
   CreateCommentBody,
   CreateIssueBody,
   UpdateIssueLabelsBody,
 } from './issue.schema';
-import type { IssueRecord, IssueRepository } from './issue.repository';
-import type { IssueStatus } from '@prisma/client';
+import type {
+  IssueRecord,
+  IssueRepository,
+  ProjectMembershipRecord,
+} from './issue.repository';
 
 export class IssueService {
   constructor(private readonly issueRepository: IssueRepository) {}
+
+  private static canWriteIssues(role: WorkspaceRole): boolean {
+    return role === 'owner' || role === 'admin' || role === 'member';
+  }
 
   private static haveSameLabelIds(currentLabelIds: string[], nextLabelIds: string[]): boolean {
     if (currentLabelIds.length !== nextLabelIds.length) {
@@ -19,18 +27,40 @@ export class IssueService {
     return nextLabelIds.every((labelId) => currentLabelIdSet.has(labelId));
   }
 
-  private async ensureProjectExists(projectId: string): Promise<void> {
-    const project = await this.issueRepository.findProject(projectId);
+  private async getProjectMembership(
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectMembershipRecord> {
+    const membership = await this.issueRepository.findProjectMembership(projectId, userId);
 
-    if (!project) {
+    if (!membership) {
       throw new NotFoundError('Project not found');
     }
+
+    return membership;
   }
 
-  private async ensureUserExists(userId: string, errorMessage: string): Promise<void> {
-    const user = await this.issueRepository.findUser(userId);
+  private async getProjectWriteMembership(
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectMembershipRecord> {
+    const membership = await this.getProjectMembership(projectId, userId);
 
-    if (!user) {
+    if (!IssueService.canWriteIssues(membership.role)) {
+      throw new ForbiddenError('You do not have permission to modify issues in this workspace');
+    }
+
+    return membership;
+  }
+
+  private async ensureWorkspaceMember(
+    projectId: string,
+    userId: string,
+    errorMessage: string,
+  ): Promise<void> {
+    const membership = await this.issueRepository.findProjectMembership(projectId, userId);
+
+    if (!membership) {
       throw new NotFoundError(errorMessage);
     }
   }
@@ -47,16 +77,20 @@ export class IssueService {
     }
   }
 
-  async listIssues(projectId: string): Promise<IssueRecord[]> {
-    await this.ensureProjectExists(projectId);
+  async listIssues(projectId: string, userId: string): Promise<IssueRecord[]> {
+    await this.getProjectMembership(projectId, userId);
     return this.issueRepository.listByProject(projectId);
   }
 
-  async createIssue(projectId: string, input: CreateIssueBody): Promise<IssueRecord> {
-    await this.ensureProjectExists(projectId);
+  async createIssue(
+    projectId: string,
+    userId: string,
+    input: CreateIssueBody,
+  ): Promise<IssueRecord> {
+    await this.getProjectWriteMembership(projectId, userId);
 
     if (input.assigneeId) {
-      await this.ensureUserExists(input.assigneeId, 'Assignee not found');
+      await this.ensureWorkspaceMember(projectId, input.assigneeId, 'Assignee not found');
     }
 
     await this.ensureLabelsExist(input.labelIds);
@@ -67,9 +101,10 @@ export class IssueService {
   async updateIssueStatus(
     projectId: string,
     issueId: string,
+    userId: string,
     status: IssueStatus,
   ): Promise<IssueRecord> {
-    await this.ensureProjectExists(projectId);
+    await this.getProjectWriteMembership(projectId, userId);
 
     const issue = await this.issueRepository.findByProjectAndId(projectId, issueId);
 
@@ -87,9 +122,10 @@ export class IssueService {
   async updateIssueAssignee(
     projectId: string,
     issueId: string,
+    userId: string,
     assigneeId: string | null,
   ): Promise<IssueRecord> {
-    await this.ensureProjectExists(projectId);
+    await this.getProjectWriteMembership(projectId, userId);
 
     const issue = await this.issueRepository.findByProjectAndId(projectId, issueId);
 
@@ -98,7 +134,7 @@ export class IssueService {
     }
 
     if (assigneeId) {
-      await this.ensureUserExists(assigneeId, 'Assignee not found');
+      await this.ensureWorkspaceMember(projectId, assigneeId, 'Assignee not found');
     }
 
     if (issue.assigneeId === assigneeId) {
@@ -111,9 +147,10 @@ export class IssueService {
   async updateIssueLabels(
     projectId: string,
     issueId: string,
+    userId: string,
     input: UpdateIssueLabelsBody,
   ): Promise<IssueRecord> {
-    await this.ensureProjectExists(projectId);
+    await this.getProjectWriteMembership(projectId, userId);
 
     const issue = await this.issueRepository.findByProjectAndId(projectId, issueId);
 
@@ -141,15 +178,13 @@ export class IssueService {
     authorId: string,
     input: CreateCommentBody,
   ): Promise<IssueRecord> {
-    await this.ensureProjectExists(projectId);
+    await this.getProjectWriteMembership(projectId, authorId);
 
     const issue = await this.issueRepository.findByProjectAndId(projectId, issueId);
 
     if (!issue) {
       throw new NotFoundError('Issue not found');
     }
-
-    await this.ensureUserExists(authorId, 'Comment author not found');
 
     return this.issueRepository.createComment(issueId, {
       ...input,
